@@ -1,0 +1,52 @@
+
+% 한자에 한글 독음을 달아준다.
+% written by Dohyun Kim
+% public domain
+
+\ProvidesPackage{readhanja}[2015/05/10 v0.1 Hangul reading annotation to Hanja]
+
+\newluatexattribute\readhanjatohangul
+\RequireLuaModule{readhanja}
+
+% [draft] 옵션을 주면 모든 독음을 다 나열한다.
+% 그중 하나를 '\t2樂' 방식으로 선택한다. 1이 기본값.
+% 현재 선택된 독음에 굵은 밑줄이 그어진다.
+% [draft] 옵션에서는 읽기 단위가 항상 char로 동작한다.
+\DeclareOption{draft}{\directlua{readhanja.draft=true}}
+\ProcessOptions\relax
+
+% 한글 독음에 쓰일 폰트는 \readhanjahangulfont로 지시한다.
+% 이 명령이 없으면 기본 한글 폰트로 식자한다.
+\RequirePackage{fontspec}
+\protected\def\readhanjahangulfont{\newfontfamily\readhanja@hangulfont}
+
+% readhanja 환경 안 or 명령 이후에만 동작한다.
+\protected\def\readhanja{%
+  \readhanjatohangul\@ne
+  \begingroup
+    \ifdefined\readhanja@hangulfont \readhanja@hangulfont \fi
+    \directlua{readhanja.hangulfont=font.current()}%
+  \endgroup
+  \def\t##1##2{\begingroup\readhanjatohangul##1##2\endgroup}%
+}
+
+% 한글 독음을 추가/수정하기:
+%   \readhanjareading{樂}{낙,락,악,요}
+% 참고로 hanja2hangul.lua는 libhangul 프로젝트의 hanja.txt에서
+% 추출한 것으로 약 27,500개 한자의 음가를 가지고 있으며
+% 음가는 가나다 순으로 정렬되어 있다.
+\protected\def\readhanjareading#1#2{%
+  \directlua{readhanja.add_hanja_reading("#1","#2")}%
+}
+
+% 한글 독음의 올려쓰기 정도: \readhanjaraise{0.5ex}. 이게 기본값.
+\protected\def\readhanjaraise#1{%
+  \directlua{readhanja.raise=tex.sp("#1")}%
+}
+
+% 읽기 단위: 독음을 글자마다 달 것인가? 단어 단위로 달 것인가?
+%   \readhanjaunit{char} or \readhanjaunit{word}
+% 단어 단위가 기본값
+\protected\def\readhanjaunit#1{%
+  \directlua{readhanja.unit="#1"}%
+}
