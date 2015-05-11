@@ -7,33 +7,28 @@ Hanja-to-Hangul sound values
 
 ## Usage
 
-*
 ```
 \usepackage[draft]{readhanja}
 ```
 draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 밑줄을 긋는다. draft 옵션은 `char` 단위를 강제한다. (see below)
 
-*
 ```
 \readhanjahangulfont{...}[...]
 ```
 한글 독음의 식자에 쓰일 글꼴을 fontspec 방식대로 지시한다.
 
-*
 ```
 \readhanjaraise{0.5ex}
 ```
 한글 독음을 올려 쓰는 정도를 지시한다. 0.5ex가 기본값.
 
-*
 ```
 \readhanjaunit{char}
 ```
 읽기 단위. 독음을 글자(`char`)마다 달 것인가, 단어(`word`) 단위로
 달 것인가, 를 지시한다. 단어 단위가 기본값.
 
-*
 ```
 \readhanjareading{樂}{낙,락,악,요}
 ```
@@ -42,13 +37,11 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 `hanja.txt`에서 추출한 것으로 약 27,500개 한자의 음가를 가지고 있으며
 음가는 가나다 순으로 정렬되어 있다.
 
-*
 ```
 \begin{readhanja} ... \end{readhanja}
 ```
 독음 달기는 readhanja 환경 안 또는 `\readhanja` 명령 이후에만 동작한다.
 
-*
 ```
 \t2樂
 ```
