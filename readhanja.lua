@@ -113,6 +113,17 @@ local function insert_hangul (head, curr, hangul, raise, allowbreak)
   return head
 end
 
+-- number -> number
+local function n_dooum_r (hangul, hanguls)
+  if hangul >= 0xB098 and hangul <= 0xB2E3 then -- ..ㄴ..
+    local hang = hangul + 1764 -- ..ㄹ..
+    for _,v in ipairs(hanguls) do
+      if hang == v then return hang end
+    end
+  end
+  return hangul
+end
+
 -- node -> node
 local function read_hanja (head)
   head = todirect(head)
@@ -123,11 +134,12 @@ local function read_hanja (head)
       if is_var_selector(char) then
         -- pass
       elseif is_hanja_char(char) then
-        local fid  = getfont(curr)
-        local attr = getattr(curr, tohangul)
+        local o_attr = getattr(curr, tohangul)
+        local attr   = (o_attr == 0) and 1 or o_attr
         if attr then
           local raise = readhanja.raise
           if not raise then
+            local fid = getfont(curr)
             raise = fontdata[fid]
             raise = raise and raise.parameters and raise.parameters.x_height
             raise = raise and raise/2 or 0
@@ -135,7 +147,7 @@ local function read_hanja (head)
 
           local hanguls = hanja2hangul[char]
           local hangul  = hanguls and hanguls[attr]
-          if hangul and attr == 1 then
+          if hangul and o_attr == 0 then
             local var_seq = hanja2varseq[char]
             if var_seq then
               local nn = getnext(curr)
@@ -146,14 +158,16 @@ local function read_hanja (head)
                   hangul = hanja2hangul[var_hanja][1]
                 elseif char == 0x4E0D then -- 不
                   local nn_attr    = getattr(nn, tohangul)
+                        nn_attr    = (nn_attr == 0) and 1 or nn_attr
                   local nn_hanguls = hanja2hangul[ nn_char ]
                   local syllable   = nn_hanguls and nn_hanguls[nn_attr] or nn_char
                   local cho        = math_floor((syllable - 0xAC00) / 588)
                   hangul = (cho == 3 or cho == 12) and 0xBD80 or 0xBD88 -- ㄷ,ㅈ ? 부 : 불
+                elseif middle then
+                  hangul = n_dooum_r(hangul, hanguls)
                 end
-              end
-              if middle and hangul >= 0xB098 and hangul <= 0xB2E3 then -- ..ㄴ..
-                hangul = hangul + 1764 -- ..ㄹ..
+              elseif middle then
+                hangul = n_dooum_r(hangul, hanguls)
               end
             end
           end

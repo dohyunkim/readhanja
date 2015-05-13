@@ -22,7 +22,7 @@
 
 % readhanja 환경 안 or 명령 이후에만 동작한다.
 \protected\def\readhanja{%
-  \readhanjatohangul\@ne
+  \readhanjatohangul\z@
   \begingroup
     \ifdefined\readhanja@hangulfont
       \readhanja@hangulfont
