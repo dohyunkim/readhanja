@@ -1,8 +1,8 @@
 
 local err,warn,info,log = luatexbase.provides_module({
   name        = 'readhanja',
-  date        = '2015/05/10',
-  version     = '0.1',
+  date        = '2015/05/14',
+  version     = '0.2',
   description = 'Hangul reading annotation to Hanja',
   author      = 'Dohyun Kim',
   license     = 'Public Domain',
@@ -116,7 +116,7 @@ end
 -- node -> node
 local function read_hanja (head)
   head = todirect(head)
-  local curr, start = head, nil
+  local curr, start, middle = head, nil, nil
   while curr do
     if getid(curr) == glyph_id then
       local char = getchar(curr)
@@ -135,23 +135,25 @@ local function read_hanja (head)
 
           local hanguls = hanja2hangul[char]
           local hangul  = hanguls and hanguls[attr]
-          if hangul and hanja2varseq[char] then
-            local nn = getnext(curr)
-            if nn and getid(nn) == glyph_id then
-              local nn_char   = getchar(nn)
-              local var_hanja = hanja2varseq[char][ nn_char - 0xFE00 + 1 ]
-              if var_hanja then
-                hangul = hanja2hangul[var_hanja][1]
-              elseif char == 0x4E0D then -- 不
-                local nn_attr    = getattr(nn)
-                local nn_hanguls = hanja2hangul[ nn_char ]
-                local syllable   = nn_hanguls and nn_hanguls[nn_attr] or nn_char
-                local cho        = math_floor((syllable - 0xAC00) / 588)
-                if cho == 3 or cho == 12 then -- ㄷ, ㅈ
-                  hangul = 0xBD80 -- 부
-                else
-                  hangul = 0xBD88 -- 불
+          if hangul and attr == 1 then
+            local var_seq = hanja2varseq[char]
+            if var_seq then
+              local nn = getnext(curr)
+              if nn and getid(nn) == glyph_id then
+                local nn_char   = getchar(nn)
+                local var_hanja = var_seq[ nn_char - 0xFE00 + 1 ]
+                if var_hanja then
+                  hangul = hanja2hangul[var_hanja][1]
+                elseif char == 0x4E0D then -- 不
+                  local nn_attr    = getattr(nn, tohangul)
+                  local nn_hanguls = hanja2hangul[ nn_char ]
+                  local syllable   = nn_hanguls and nn_hanguls[nn_attr] or nn_char
+                  local cho        = math_floor((syllable - 0xAC00) / 588)
+                  hangul = (cho == 3 or cho == 12) and 0xBD80 or 0xBD88 -- ㄷ,ㅈ ? 부 : 불
                 end
+              end
+              if middle and hangul >= 0xB098 and hangul <= 0xB2E3 then -- ..ㄴ..
+                hangul = hangul + 1764 -- ..ㄹ..
               end
             end
           end
@@ -179,15 +181,16 @@ local function read_hanja (head)
             head  = insert_hangul(head, start, hangul, raise, true)
 
           end
+          middle = true
           unset_attr(curr, tohangul)
         else
-          start = nil
+          start, middle = nil, nil
         end -- end of attr
       else
-        start = nil
+        start, middle = nil, nil
       end -- end of is_hanja_char
     else
-      start = nil
+      start, middle = nil, nil
     end -- end of glyph_id
     curr = getnext(curr)
   end -- end of curr

@@ -3,7 +3,7 @@
 % written by Dohyun Kim
 % public domain
 
-\ProvidesPackage{readhanja}[2015/05/10 v0.1 Hangul reading annotation to Hanja]
+\ProvidesPackage{readhanja}[2015/05/14 v0.2 Hangul reading annotation to Hanja]
 
 \newluatexattribute\readhanjatohangul
 \RequireLuaModule{readhanja}
@@ -24,7 +24,13 @@
 \protected\def\readhanja{%
   \readhanjatohangul\@ne
   \begingroup
-    \ifdefined\readhanja@hangulfont \readhanja@hangulfont \fi
+    \ifdefined\readhanja@hangulfont
+      \readhanja@hangulfont
+    \else
+      \ifdefined\hangul@font
+        \hangul@font
+      \fi
+    \fi
     \directlua{readhanja.hangulfont=font.current()}%
   \endgroup
   \def\t##1##2{\begingroup\readhanjatohangul##1##2\endgroup}%
@@ -32,9 +38,6 @@
 
 % 한글 독음을 추가/수정하기:
 %   \readhanjareading{樂}{낙,락,악,요}
-% 참고로 hanja2hangul.lua는 libhangul 프로젝트의 hanja.txt에서
-% 추출한 것으로 약 27,500개 한자의 음가를 가지고 있으며
-% 음가는 가나다 순으로 정렬되어 있다.
 \protected\def\readhanjareading#1#2{%
   \directlua{readhanja.add_hanja_reading("#1","#2")}%
 }
