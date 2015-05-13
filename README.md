@@ -33,14 +33,16 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 \readhanjareading{樂}{낙,락,악,요}
 ```
 한글 음가 DB를 수정하거나 항목을 추가한다. 참고로 `hanja2hangul.lua`는
-[libhangul](https://github.com/choehwanjin/libhangul) 프로젝트의
-`hanja.txt`에서 추출한 것으로 약 27,500개 한자의 음가를 가지고 있으며
-음가는 가나다 순으로 정렬되어 있다.
+[Unihan](http://unicode.org/charts/unihan.html)과
+[libhangul](https://github.com/choehwanjin/libhangul)
+프로젝트에서 추출한 것으로 약 27,800개 한자의 음가를
+가지고 있다. 음가의 정렬은 Unihan의 `kHangul`을 앞세웠으나,
+다만 U+6635 U+66B1 U+8D05는 `kKorean` 값을 읽어 맨 앞에 두었다.
 
 ```
 \begin{readhanja} ... \end{readhanja}
 ```
-독음 달기는 readhanja 환경 안 또는 `\readhanja` 명령 이후에만 동작한다.
+독음 달기는 `readhanja` 환경 안 또는 `\readhanja` 명령 이후에만 동작한다.
 
 ```
 \t2樂
@@ -51,29 +53,30 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 ## Example
 
 ```
-\documentclass[ 12pt,
-		% draft,
-	]{article}
+\documentclass[12pt, % draft,
+    ]{article}
 \usepackage[hangul]{kotex}
-	\setmainhangulfont{KoPubBatang Pro Light}
-	\setmainhanjafont {KoPubBatang Pro Medium}
-	\setmainfallbackfont{HCR Dotum LVT}[Color=00AAAA]
+  \setmainhangulfont{HCR Batang LVT}
 \usepackage{readhanja}
-	\readhanjahangulfont{KoPubBatang Pro Light}[Color=AA000080,Scale=.7]
+  \readhanjahangulfont{HCR Batang LVT}[Color=AA0000A0,Scale=.7]
 \begin{document}
-\section{騷壇赤幟引}
+\section*{大學}
 \begin{readhanja}
-  善爲文者, 其知兵乎? 字譬則士也; 意譬則將也; 題目者, 敵國也; 掌故者, 戰\t2場墟\t2壘也;
-  束字爲句, 團句成章, 猶隊伍\t2行陣也;
-  韻以聲之, 詞以耀之, 猶金鼓旌旗也; 照應者, 烽\t2埈也;
-  譬喩者, 遊騎也; 抑揚反復者,
-  鏖戰\t3撕殺也; 破題而結束者, 先登而擒敵也;
-  貴含蓄者, 不禽二毛也; 有餘音者, 振旅而凱旋也.
+大學之道 在明明德 在親民 在止於至善。
+知止而后有定 定而后能靜 靜而后能安 安而后能慮 慮而后能得。
+物有本末 事有終始 知所先後 \t2則近道矣。
+古之欲明明德於天下者 先治其國 欲治其國者 先齊其家
+欲齊其家者 先修其身 欲修其身者 先正其心 欲正其心者
+先誠其意 欲誠其意者 先致其知 致知在格物。
+物格而后知至 知至而后意誠 意誠而后心正 心正而后身修
+身修而后家齊 家齊而后國治 國治而后天下平。
+自天子以至於庶人 壹是皆以修身為本。
+其本亂而末治者否矣 其所厚者薄 而其所薄者厚 未之有也。
 \end{readhanja}
 \end{document}
 ```
 
 ## License
 
-Publid Domain,
+Public Domain,
 with an exception of `hanja2hangul.lua` which is in LGPL.
