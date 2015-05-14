@@ -53,3 +53,10 @@
 \protected\def\readhanjaunit#1{%
   \directlua{readhanja.unit="#1"}%
 }
+
+% 독음 달기 위치: 한자 앞에 달 것인가, 뒤에 달 것인가.
+%   \readhanjalocate{pre} or \readhanjalocate{post}
+% 기본값은 pre
+\protected\def\readhanjalocate#1{%
+  \directlua{readhanja.locate="#1"}%
+}

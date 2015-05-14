@@ -18,6 +18,7 @@ local getchar       = ndirect.getchar
 local getfont       = ndirect.getfont
 local copynode      = ndirect.copy
 local insert_before = ndirect.insert_before
+local insert_after  = ndirect.insert_after
 local getfield      = ndirect.getfield
 local setfield      = ndirect.setfield
 local getnext       = ndirect.getnext
@@ -25,6 +26,7 @@ local tonode        = ndirect.tonode
 local newnode       = ndirect.new
 local getattr       = ndirect.has_attribute
 local unset_attr    = ndirect.unset_attribute
+local tailnode      = ndirect.tail
 
 local node_id       = node.id
 local glyph_id      = node_id("glyph")
@@ -60,6 +62,7 @@ local function is_hanja_char (ch)
       or (ch >= 0x2F800 and ch <= 0x2FA1F)
 end
 
+-- hanja2hangul 테이블을 수정/추가한다
 -- string * string -> none
 local function add_hanja_reading (hanja, hanguls)
   hanja   = utfbyte(hanja)
@@ -69,6 +72,9 @@ local function add_hanja_reading (hanja, hanguls)
 end
 readhanja.add_hanja_reading = add_hanja_reading
 
+-- 현재 음가에 밑줄을 긋거나, 음가 결락 한자에 대해 네모상자를
+-- 그리는 rule node를 반환한다. `hangul` 변수가 입력된다면
+-- 현재 음가에 밑줄긋기 요청임을 의미한다
 -- number * (number | nil) -> node * number
 local function get_rule_node (raise, hangul)
   local wd, ht, dp
@@ -94,26 +100,43 @@ local function get_rule_node (raise, hangul)
   return rule, wd
 end
 
--- node * node * (number | false) * number * (bool | nil) -> node
+-- 한글 glyph를 추가한다. `pre` 모드에서는 head 노드열에 직접 추가하고,
+-- `post` 모드에서는 head 테이블에 추가하여 테이블을 반환한다
+-- (node | table) * node * (number | false) * number * bool -> (node | table)
 local function insert_hangul (head, curr, hangul, raise, allowbreak)
+  local postmode = type(head) == "table"
+  if not allowbreak and postmode then
+    head[#head + 1] = copynode(nobreak)
+  end
   if hangul then
     local hangulnode  = copynode(curr)
     local yoffset     = getfield(hangulnode, "yoffset") or 0
     setfield(hangulnode, "char", hangul)
     setfield(hangulnode, "font", readhanja.hangulfont)
     setfield(hangulnode, "yoffset", yoffset + raise)
-    head = insert_before(head, curr, hangulnode)
+    if postmode then
+      head[#head + 1] = hangulnode
+    else
+      head = insert_before(head, curr, hangulnode)
+    end
   else
     local rule = get_rule_node(raise)
-    head = insert_before(head, curr, rule)
+    if postmode then
+      head[#head + 1] = rule
+    else
+      head = insert_before(head, curr, rule)
+    end
   end
-  if not allowbreak then
-    head = insert_before(head, curr, copynode(nobreak))
+  if not allowbreak and not postmode then
+      head = insert_before(head, curr, copynode(nobreak))
   end
   return head
 end
 
--- number -> number
+-- ㄴ으로 시작하는 음가가 단어 중간에 왔을 때 ㄹ로 시작하는 음가로
+-- 바꾸어준다. 호환한자로의 variation selector를 가지고 있는 한자에
+-- 대해서만 이 함수를 호출할 것
+-- number * table -> number
 local function n_dooum_r (hangul, hanguls)
   if hangul >= 0xB098 and hangul <= 0xB2E3 then -- ..ㄴ..
     local hang = hangul + 1764 -- ..ㄹ..
@@ -124,10 +147,26 @@ local function n_dooum_r (hangul, hanguls)
   return hangul
 end
 
+-- `post` 모드에서만 필요한 함수. appends 테이블에 들어있는 모든
+-- 노드를 노드열에 추가하고 빈 테이블을 반환한다
+-- node * node * table * bool -> node * table
+local function flush_appends (head, curr, appends, after)
+  for _,v in ipairs(appends) do
+    if after then
+      head, curr = insert_after(head, curr, v)
+    else
+      head = insert_before(head, curr, v)
+    end
+  end
+  return head, {} -- no need to return curr
+end
+
 -- node -> node
 local function read_hanja (head)
   head = todirect(head)
   local curr, start, middle = head, nil, nil
+  local appends = readhanja.locate == "post" and {} or nil
+
   while curr do
     if getid(curr) == glyph_id then
       local char = getchar(curr)
@@ -145,6 +184,7 @@ local function read_hanja (head)
             raise = raise and raise/2 or 0
           end
 
+          -- 음가를 결정한다
           local hanguls = hanja2hangul[char]
           local hangul  = hanguls and hanguls[attr]
           if hangul and o_attr == 0 then
@@ -172,42 +212,79 @@ local function read_hanja (head)
             end
           end
 
+          -- draft 옵션이 주어진 경우
           if readhanja.draft then
+            if appends then
+              head, appends = flush_appends(head, curr, appends)
+            end
             local hanguls = hanguls or { false }
             for i=1,#hanguls do
               local t_hangul = hanguls[i]
-              head = insert_hangul(head, curr, t_hangul, raise)
+              if appends then
+                appends = insert_hangul(appends, curr, t_hangul, raise)
+              else
+                head = insert_hangul(head, curr, t_hangul, raise)
+              end
               if #hanguls > 1 and hangul == t_hangul then
                 local rule, wd = get_rule_node(raise, hangul)
                 local kern     = copynode(newkern)
                 setfield(kern, "kern", -wd)
-                head = insert_before(head, curr, kern)
-                head = insert_before(head, curr, rule)
-                head = insert_before(head, curr, copynode(nobreak))
+                if appends then
+                  appends[#appends + 1] = kern
+                  appends[#appends + 1] = rule
+                else
+                  head = insert_before(head, curr, kern)
+                  head = insert_before(head, curr, rule)
+                  head = insert_before(head, curr, copynode(nobreak))
+                end
               end
             end
 
+          -- 글자 단위로 읽으라고 요구한 경우
           elseif readhanja.unit == "char" then
-            head = insert_hangul(head, curr, hangul, raise)
+            if appends then
+              head, appends = flush_appends(head, curr, appends)
+              appends = insert_hangul(appends, curr, hangul, raise)
+            else
+              head = insert_hangul(head, curr, hangul, raise)
+            end
 
+          -- 디폴트. 단어 단위 처리
           else
             start = start or curr
-            head  = insert_hangul(head, start, hangul, raise, true)
+            if appends then
+              appends = insert_hangul(appends, start, hangul, raise, true)
+            else
+              head  = insert_hangul(head, start, hangul, raise, true)
+            end
 
           end
           middle = true
           unset_attr(curr, tohangul)
         else
           start, middle = nil, nil
+          if appends then
+            head, appends = flush_appends(head, curr, appends)
+          end
         end -- end of attr
       else
         start, middle = nil, nil
+        if appends then
+          head, appends = flush_appends(head, curr, appends)
+        end
       end -- end of is_hanja_char
     else
       start, middle = nil, nil
+      if appends then
+        head, appends = flush_appends(head, curr, appends)
+      end
     end -- end of glyph_id
     curr = getnext(curr)
   end -- end of curr
+
+  if appends then -- 남은 것은 마지막 노드 뒤에다 붙인다
+    head = flush_appends(head, tailnode(head), appends, true)
+  end
   return tonode(head)
 end
 
