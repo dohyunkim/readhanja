@@ -19,7 +19,7 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 한글 독음의 식자에 쓰일 글꼴을 fontspec 방식대로 지시한다.
 
 ```
-\readhanjaraise{0.5ex}
+\readhanjaraise{0pt}
 ```
 한글 독음을 올려 쓰는 정도를 지시한다. 0.5ex가 기본값.
 
@@ -36,7 +36,7 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 달 것인가, 를 지시한다. 단어 단위가 기본값.
 
 ```
-\readhanjareading{樂}{낙,락,악,요}
+\readhanjareading{樂}{악,낙,락,요}
 ```
 한글 음가 DB를 수정하거나 항목을 추가한다. 참고로 `hanja2hangul.lua`는
 [Unihan](http://unicode.org/charts/unihan.html)과
@@ -48,19 +48,26 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 ```
 \begin{readhanja} ... \end{readhanja}
 ```
-독음 달기는 `readhanja` 환경 안 또는 `\readhanja` 명령 이후에만 동작한다.
+독음 달기는 readhanja 환경 안 또는 `\readhanja` 명령 이후에만 동작한다.
 
 ```
 \t2樂
 ```
-예컨대 `樂` 글자의 여러 음가 가운데 두번째 음가를 선택한다.
-위의 [draft] 옵션 참조.
+예컨대 樂 글자의 여러 음가 가운데 두번째 음가를 선택한다.
+위의 draft 옵션 참조. 물론 readhanja 그룹 밖에서는 `\t` 명령이 다른 의미를 가질 수 있다.
+
+```
+樂^^^^fe02
+```
+U+FE00부터 U+FE02까지의 문자를 입력하면 직전 한자의 음가를 바꿀 수 있다.
+[여기](http://unicode.org/Public/UCD/latest/ucd/StandardizedVariants.txt)를
+참조.
 
 ## Example
 
 ```
 \documentclass[12pt, % draft,
-    ]{article}
+  ]{article}
 \usepackage[hangul]{kotex}
   \setmainhangulfont{HCR Batang LVT}
 \usepackage{readhanja}

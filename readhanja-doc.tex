@@ -1,0 +1,132 @@
+\documentclass[b5paper]{article}
+\usepackage[hangul]{kotex}
+  \setmainhangulfont{HCR Batang LVT}
+  \setmonofont{Source Han Sans HW K}[Color=191970,Scale=.95]
+\usepackage{readhanja}
+  \readhanjahangulfont{HCR Batang LVT}[Color=AA000080,Scale=.7]
+\usepackage{url}
+\usepackage{colorVerb}
+  \cscolor{"0 0.5 0.5"}
+\begin{document}
+
+\title{\ttfamily readhanja 패키지 v0.3}
+\author{Dohyun Kim\thanks{\texttt{nomos at ktug org}.
+  아이디어와 동기를 주신 김강수 선생께 감사드린다.}}
+\maketitle
+
+\begin{quote}
+A Lua\LaTeX\ package for semi-automatized typesetting of
+Hanja-to-Hangul sound values.
+한자만 입력하면 한글 독음을 붙여주는 패키지. 루아텍 판.\footnote{
+  github 저장소: \url{https://github.com/dohyunkim/readhanja}}
+\end{quote}
+
+\section*{Usage}
+
+\begin{verbatim}
+  \usepackage[draft]{readhanja}
+\end{verbatim}
+draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
+밑줄을 긋는다. draft 옵션은 \verb|char| 단위를 강제한다. (see below)
+
+\begin{verbatim}
+  \readhanjahangulfont{...}[...]
+\end{verbatim}
+한글 독음의 식자에 쓰일 글꼴을 fontspec 방식대로 지시한다.
+
+\begin{verbatim}
+  \readhanjaraise{0pt}
+\end{verbatim}
+한글 독음을 올려 쓰는 정도를 지시한다. 0.5ex가 기본값.
+
+\begin{verbatim}
+  \readhanjalocate{post}
+\end{verbatim}
+독음의 위치. 한자 앞\,\verb|pre|\,에 달 것인가, 뒤\,\verb|post|\,에 달 것인가, 를
+지시한다.  기본값은 \verb|pre|.
+
+\begin{verbatim}
+  \readhanjaunit{char}
+\end{verbatim}
+읽기 단위. 독음을 글자\,\verb|char|\,마다 달 것인가, 단어\,\verb|word| 단위로
+달 것인가, 를 지시한다. 단어 단위가 기본값.
+
+\begin{verbatim}
+  \readhanjareading{樂}{악,낙,락,요}
+\end{verbatim}
+한글 음가 DB를 수정하거나 항목을 추가한다. 참고로 \verb|hanja2hangul.lua|는
+Unihan\footnote{\url{http://unicode.org/charts/unihan.html}}과
+libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
+프로젝트에서 추출한 것으로 약 27,800개 한자의 음가를
+가지고 있다. 음가의 정렬은 Unihan의 \verb|kHangul|을 앞세웠으나,
+다만 \mbox{U+6635} \mbox{U+66B1} \mbox{U+8D05}는 \verb|kKorean| 값을 읽어 맨 앞에 두었다.
+
+\begin{verbatim}
+  \begin{readhanja} ... \end{readhanja}
+\end{verbatim}
+독음 달기는 readhanja 환경 안 또는 \verb|\readhanja| 명령 이후에만 동작한다.
+
+\begin{verbatim}
+  \t2樂
+\end{verbatim}
+예컨대 樂 글자의 여러 음가 가운데 두번째 음가를 선택한다.
+위의 draft 옵션 참조.
+물론 readhanja 그룹 안에서만 그러하며 그룹 밖에서는 이 명령이 다른 의미를 가질 수 있다.
+
+\begin{verbatim}
+  樂^^^^fe02
+\end{verbatim}
+\mbox{U+FE00}부터 \mbox{U+FE02}까지의 문자를 입력하면 직전 한자의 음가를
+바꿀 수 있다. 따라서 예의 \mbox{U+FE02}는 네 번째 음가를 지칭한다.
+이 기능은 호환 한자를 가지는 글자에 대해서만 동작한다.\footnote{
+\url{http://unicode.org/Public/UCD/latest/ucd/StandardizedVariants.txt}}
+
+
+\section*{Example}
+
+\setmonofont{Source Han Sans HW K}[Scale=.94]
+\usecolorVerb
+
+\begin{verbatim}
+  \documentclass[12pt, % draft,
+    ]{article}
+  \usepackage[hangul]{kotex}
+    \setmainhangulfont{HCR Batang LVT}
+  \usepackage{readhanja}
+    \readhanjahangulfont{HCR Batang LVT}[Color=AA0000A0,Scale=.7]
+  \begin{document}
+  \section*{大學}
+  \begin{readhanja}
+    大學之道 在明明德 在親民 在止於至善。
+    知止而后有定 定而后能靜 靜而后能安 安而后能慮 慮而后能得。
+    物有本末 事有終始 知所先後 \t2則近道矣。
+    古之欲明明德於天下者 先治其國 欲治其國者 先齊其家
+    欲齊其家者 先修其身 欲修其身者 先正其心 欲正其心者
+    先誠其意 欲誠其意者 先致其知 致知在格物。
+    物格而后知至 知至而后意誠 意誠而后心正 心正而后身修
+    身修而后家齊 家齊而后國治 國治而后天下平。
+    自天子以至於庶人 壹是皆以修身為本。
+    其本亂而末治者否矣 其所厚者薄 而其所薄者厚 未之有也。
+  \end{readhanja}
+  \end{document}
+\end{verbatim}
+
+\section*{大學}
+\begin{readhanja}
+  大學之道 在明明德 在親民 在止於至善。
+  知止而后有定 定而后能靜 靜而后能安 安而后能慮 慮而后能得。
+  物有本末 事有終始 知所先後 \t2則近道矣。
+  古之欲明明德於天下者 先治其國 欲治其國者 先齊其家
+  欲齊其家者 先修其身 欲修其身者 先正其心 欲正其心者
+  先誠其意 欲誠其意者 先致其知 致知在格物。
+  物格而后知至 知至而后意誠 意誠而后心正 心正而后身修
+  身修而后家齊 家齊而后國治 國治而后天下平。
+  自天子以至於庶人 壹是皆以修身為本。
+  其本亂而末治者否矣 其所厚者薄 而其所薄者厚 未之有也。
+\end{readhanja}
+
+\section*{License}
+
+Public Domain,
+with an exception of \verb|hanja2hangul.lua| which is in LGPL.
+\end{document}
