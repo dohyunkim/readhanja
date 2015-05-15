@@ -16,23 +16,17 @@ close $fh;
 
 my %varseq = ();
 
-
-binmode STDOUT, ":utf8";
-
-
 open $fh, "hanja2varseq.lua" or die;
 while(<$fh>) {
   if(/\[(\d+)\]={(.+)},/) {
     my $hanja = $1;
     for my $var (split ",", $2) {
       push @{ $varseq{$hanja} }, @{ $hanjas{$var} };
-      printf "%c %04X: %s\n", $hanja,$hanja, join ",",map (chr, @{ $varseq{$hanja} });
     }
   }
 }
 close $fh;
 
-__END__
 for my $hanja (keys %hanjas) {
   my @hanguls = ();
   for my $hangul (@{ $hanjas{$hanja} }) {

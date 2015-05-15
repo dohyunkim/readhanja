@@ -133,19 +133,18 @@ local function insert_hangul (head, curr, hangul, raise, allowbreak)
   return head
 end
 
--- ㄹ로 시작하는 음가가 단어 처음에 왔을 때 두음법칙에 따라
--- 음가를 바꾸어준다. 호환한자로의 variation selector를
--- 가지고 있는 한자에 대해서만 이 함수를 호출할 것
+-- ㄴ이나 ㄹ로 시작하는 음가가 단어 처음에 왔을 때 두음법칙에 따라
+-- 음가를 바꾸어준다. 호환한자로의 variation selector를 가지고
+-- 있는 한자에 대해서만 이 함수를 호출할 것
 -- number * table -> number
-local function n_dooum_r (hangul, hanguls)
-  if hangul >= 0xB77C and hangul <= 0xB9C7 then -- ㄹ..
-    local hang = hangul + 3528 -- ㅇ..
-    for _,v in ipairs(hanguls) do
-      if hang == v then return hang end
-    end
-    hang = hangul - 1764 -- ㄴ..
-    for _,v in ipairs(hanguls) do
-      if hang == v then return hang end
+local function n_dooum_r (hangul, var_seq)
+  if (hangul >= 0xB77C and hangul <= 0xB9C7) then -- ㄹ..
+    local var_hanja = var_seq[1]
+    return hanja2hangul[var_hanja][1]
+  elseif (hangul >= 0xB098 and hangul <= 0xB2E3) then -- ㄴ..
+    local hang = hangul + 5292 -- ㅇ..
+    for _,v in ipairs(var_seq) do
+      if hang == hanja2hangul[v][1] then return hang end
     end
   end
   return hangul
@@ -208,10 +207,10 @@ local function read_hanja (head)
                   local cho        = math_floor((syllable - 0xAC00) / 588)
                   hangul = (cho == 3 or cho == 12) and 0xBD80 or 0xBD88 -- ㄷ,ㅈ ? 부 : 불
                 elseif not middle then
-                  hangul = n_dooum_r(hangul, hanguls)
+                  hangul = n_dooum_r(hangul, var_seq)
                 end
               elseif not middle then
-                hangul = n_dooum_r(hangul, hanguls)
+                hangul = n_dooum_r(hangul, var_seq)
               end
             end
           end
