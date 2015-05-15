@@ -133,18 +133,27 @@ local function insert_hangul (head, curr, hangul, raise, allowbreak)
   return head
 end
 
--- ㄴ이나 ㄹ로 시작하는 음가가 단어 처음에 왔을 때 두음법칙에 따라
--- 음가를 바꾸어준다. 호환한자로의 variation selector를 가지고
--- 있는 한자에 대해서만 이 함수를 호출할 것
--- number * table -> number
-local function n_dooum_r (hangul, var_seq)
-  if (hangul >= 0xB77C and hangul <= 0xB9C7) then -- ㄹ..
-    local var_hanja = var_seq[1]
-    return hanja2hangul[var_hanja][1]
-  elseif (hangul >= 0xB098 and hangul <= 0xB2E3) then -- ㄴ..
-    local hang = hangul + 5292 -- ㅇ..
-    for _,v in ipairs(var_seq) do
-      if hang == hanja2hangul[v][1] then return hang end
+-- 두음법칙에 따라 음가를 바꾸어준다. variation selector가
+-- 있는 경우에만 동작한다.
+-- number * table * (number | nil) -> number
+local function n_dooum_r (hangul, var_seq, last_hangul)
+  if last_hangul then -- 단어 중간
+    if hangul == 0xB82C or hangul == 0xB960 then -- 렬, 률
+      local jong = (last_hangul - 0xAC00) % 28
+      if jong == 0 or jong == 4 then -- .모음 or ..ㄴ
+        local var_hanja = var_seq[1]
+        return hanja2hangul[var_hanja][1]
+      end
+    end
+  else
+    if (hangul >= 0xB77C and hangul <= 0xB9C7) then -- ㄹ..
+      local var_hanja = var_seq[1]
+      return hanja2hangul[var_hanja][1]
+    elseif (hangul >= 0xB098 and hangul <= 0xB2E3) then -- ㄴ..
+      local hang = hangul + 5292 -- ㅇ..
+      for _,v in ipairs(var_seq) do
+        if hang == hanja2hangul[v][1] then return hang end
+      end
     end
   end
   return hangul
@@ -167,7 +176,7 @@ end
 -- node -> node
 local function read_hanja (head)
   head = todirect(head)
-  local curr, start, middle = head, nil, nil
+  local curr, start, middle, last_hangul = head, nil, nil, nil
   local appends = readhanja.locate == "post" and {} or nil
 
   while curr do
@@ -208,9 +217,13 @@ local function read_hanja (head)
                   hangul = (cho == 3 or cho == 12) and 0xBD80 or 0xBD88 -- ㄷ,ㅈ ? 부 : 불
                 elseif not middle then
                   hangul = n_dooum_r(hangul, var_seq)
+                else
+                  hangul = n_dooum_r(hangul, var_seq, last_hangul)
                 end
               elseif not middle then
                 hangul = n_dooum_r(hangul, var_seq)
+              else
+                hangul = n_dooum_r(hangul, var_seq, last_hangul)
               end
             end
           end
@@ -262,22 +275,22 @@ local function read_hanja (head)
             end
 
           end
-          middle = true
+          middle, last_hangul = true, hangul
           unset_attr(curr, tohangul)
         else
-          start, middle = nil, nil
+          start, middle, last_hangul = nil, nil, nil
           if appends then
             head, appends = flush_appends(head, curr, appends)
           end
         end -- end of attr
       else
-        start, middle = nil, nil
+        start, middle, last_hangul = nil, nil, nil
         if appends then
           head, appends = flush_appends(head, curr, appends)
         end
       end -- end of is_hanja_char
     else
-      start, middle = nil, nil
+      start, middle, last_hangul = nil, nil, nil
       if appends then
         head, appends = flush_appends(head, curr, appends)
       end
