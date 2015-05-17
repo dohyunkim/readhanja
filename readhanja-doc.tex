@@ -9,7 +9,7 @@
   \cscolor{"0 0.5 0.5"}
 \begin{document}
 
-\title{\ttfamily readhanja 패키지 v0.3}
+\title{\ttfamily readhanja 패키지 v0.4}
 \author{Dohyun Kim\thanks{\texttt{nomos at ktug org}.
   아이디어와 동기를 주신 김강수 선생께 감사드린다.}}
 \maketitle
@@ -43,7 +43,7 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
   \readhanjalocate{post}
 \end{verbatim}
 독음의 위치. 한자 앞\,\verb|pre|\,에 달 것인가, 뒤\,\verb|post|\,에 달 것인가, 를
-지시한다.  기본값은 \verb|pre|.
+지시한다.  기본값은 앞에 달기.
 
 \begin{verbatim}
   \readhanjaunit{char}
@@ -57,9 +57,16 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 한글 음가 DB를 수정하거나 항목을 추가한다. 참고로 \verb|hanja2hangul.lua|는
 Unihan\footnote{\url{http://unicode.org/charts/unihan.html}}과
 libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
-프로젝트에서 추출한 것으로 약 27,800개 한자의 음가를
-가지고 있다. 음가의 정렬은 Unihan의 \verb|kHangul|을 앞세웠으나,
-다만 \mbox{U+6635} \mbox{U+66B1} \mbox{U+8D05}는 \verb|kKorean| 값을 읽어 맨 앞에 두었다.
+프로젝트에서 추출한 약 27,800개 한자의 음가를
+가지고 있다.\footnote{음가의 정렬은 Unihan의 \texttt{kHangul}을 앞세웠으나
+  다만 \mbox{U+6635} \mbox{U+66B1} \mbox{U+8D05}는 \texttt{kKorean} 값을 읽어
+  맨 앞에 두었다. 한편, 호환한자의 음가와 같은 음가는 두번째 이하로 돌렸다.}
+
+\begin{verbatim}
+  \readhanjadictionary{召史}{조이}
+  \readhanjadictionary{召史}{}
+\end{verbatim}
+한자 읽기 낱말 사전에 항목을 추가하거나 삭제할 수 있다.
 
 \begin{verbatim}
   \begin{readhanja} ... \end{readhanja}
@@ -67,11 +74,13 @@ libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
 독음 달기는 readhanja 환경 안 또는 \verb|\readhanja| 명령 이후에만 동작한다.
 
 \begin{verbatim}
-  \t2樂
+  \t4樂
+  \t`요樂
 \end{verbatim}
-예컨대 樂 글자의 여러 음가 가운데 두번째 음가를 선택한다.
-위의 draft 옵션 참조.
-물론 readhanja 그룹 안에서만 그러하며 그룹 밖에서는 이 명령이 다른 의미를 가질 수 있다.
+예컨대 樂 글자의 여러 음가 가운데 네번째 음가를 선택한다\,(제1행).
+또는 한글 음가를 직접 지시할 수도 있다\,(제2행).\footnote{여기서 \texttt{`요}는 십진수 50836과 같다.
+  다시 말해 숫자가 유니코드 한글 음절 코드포인트에 해당하는 큰 것이라면 그 숫자가 음가를 직접 의미한다.}
+물론 readhanja 그룹 밖에서는 이 명령이 다른 의미를 가질 수 있다.
 
 \begin{verbatim}
   樂^^^^fe02
@@ -84,7 +93,7 @@ libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
 
 \section*{Example}
 
-\setmonofont{Source Han Sans HW K}[Scale=.94]
+\setmonofont{Source Han Sans HW K}[Scale=.95]
 \usecolorVerb
 
 \begin{verbatim}

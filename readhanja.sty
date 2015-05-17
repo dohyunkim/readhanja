@@ -3,7 +3,7 @@
 % written by Dohyun Kim
 % public domain
 
-\ProvidesPackage{readhanja}[2015/05/14 v0.3 Hangul reading annotation to Hanja]
+\ProvidesPackage{readhanja}[2015/05/17 v0.4 Typeset Hanja-to-Hangul sound values]
 
 \newluatexattribute\readhanjatohangul
 \RequireLuaModule{readhanja}
@@ -33,14 +33,24 @@
     \fi
     \directlua{readhanja.hangulfont=font.current()}%
   \endgroup
-  \def\t##1##2{\begingroup\readhanjatohangul##1##2\endgroup}%
+  \def\t{\begingroup\afterassignment\readhanja@tohangul\count@}%
 }
+\def\readhanja@tohangul#1{\readhanjatohangul\count@#1\endgroup}
 
 % 한글 독음을 추가/수정하기:
 %   \readhanjareading{樂}{낙,락,악,요}
 \protected\def\readhanjareading#1#2{%
   \directlua{readhanja.add_hanja_reading("#1","#2")}%
 }
+
+% 한글 읽기 사전 추가:
+%   \readhanjadictionary{召史}{조이}
+% 사전에서 삭제:
+%   \readhanjadictionary{召史}{}
+\protected\def\readhanjadictionary#1#2{%
+  \directlua{readhanja.add_hanja_dictionary("#1","#2")}%
+}
+
 
 % 한글 독음의 올려쓰기 정도: \readhanjaraise{0.5ex}. 이게 기본값.
 \protected\def\readhanjaraise#1{%

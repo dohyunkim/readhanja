@@ -1,9 +1,9 @@
 
 local err,warn,info,log = luatexbase.provides_module({
   name        = 'readhanja',
-  date        = '2015/05/14',
-  version     = '0.3',
-  description = 'Hangul reading annotation to Hanja',
+  date        = '2015/05/17',
+  version     = '0.4',
+  description = 'Typeset Hanja-to-Hangul sound values',
   author      = 'Dohyun Kim',
   license     = 'Public Domain',
 })
@@ -26,6 +26,7 @@ local tonode        = ndirect.tonode
 local newnode       = ndirect.new
 local getattr       = ndirect.has_attribute
 local unset_attr    = ndirect.unset_attribute
+local set_attr      = ndirect.set_attribute
 local tailnode      = ndirect.tail
 
 local node_id       = node.id
@@ -71,6 +72,30 @@ local function add_hanja_reading (hanja, hanguls)
   hanja2hangul[hanja] = hanguls
 end
 readhanja.add_hanja_reading = add_hanja_reading
+
+local reading_dictionary = {}
+
+-- reading_dictionary 테이블을 추가/수정/삭제한다
+-- string * string -> none
+local function add_hanja_dictionary (hanjas, hanguls)
+  local dict = reading_dictionary
+  hanjas = hanjas:gsub("%s","")
+  for hanja in hanjas:utfvalues() do
+    dict[hanja] = dict[hanja] or {}
+    dict = dict[hanja]
+  end
+  hanguls = hanguls:gsub("%s","")
+  if hanguls == "" then
+    dict[0] = nil
+  else
+    dict[0] = {}
+    dict = dict[0]
+    for hangul in hanguls:utfvalues() do
+      dict[#dict + 1] = hangul
+    end
+  end
+end
+readhanja.add_hanja_dictionary = add_hanja_dictionary
 
 -- 현재 음가에 밑줄을 긋거나, 음가 결락 한자에 대해 네모상자를
 -- 그리는 rule node를 반환한다. `hangul` 변수가 입력된다면
@@ -159,6 +184,33 @@ local function n_dooum_r (hangul, var_seq, last_hangul)
   return hangul
 end
 
+-- reading_dictionary 검색해서 다음 노드들의 tohangul 속성을 고치고
+-- 첫번째 한자의 한글 음가를 반환한다.
+-- table * number * node * table * (node | nil) -> table * number
+local function search_dictionary(hanguls, hangul, curr, dict, nn)
+  local hanja_nodes = {}
+  nn = nn or getnext(curr)
+  while nn and getid(nn) == glyph_id do
+    local char = getchar(nn)
+    if dict[char] then
+      hanja_nodes[#hanja_nodes + 1] = nn
+      dict = dict[char]
+    else
+      break
+    end
+    nn = getnext(nn)
+  end
+  local readings = dict[0]
+  if readings then
+    for i,v in ipairs(hanja_nodes) do
+      set_attr(v, tohangul, readings[i + 1])
+    end
+    hangul  = readings[1]
+    hanguls = { hangul }
+  end
+  return hanguls, hangul
+end
+
 -- `post` 모드에서만 필요한 함수. appends 테이블에 들어있는 모든
 -- 노드를 노드열에 추가하고 빈 테이블을 반환한다
 -- node * node * table * bool -> node * table
@@ -197,33 +249,57 @@ local function read_hanja (head)
           end
 
           -- 음가를 결정한다
-          local hanguls = hanja2hangul[char]
-          local hangul  = hanguls and hanguls[attr]
-          if hangul and o_attr == 0 then
-            local var_seq = hanja2varseq[char]
-            if var_seq then
-              local nn = getnext(curr)
-              if nn and getid(nn) == glyph_id then
-                local nn_char   = getchar(nn)
-                local var_hanja = var_seq[ nn_char - 0xFE00 + 1 ]
-                if var_hanja then
-                  hangul = hanja2hangul[var_hanja][1]
-                elseif char == 0x4E0D then -- 不
-                  local nn_attr    = getattr(nn, tohangul)
-                        nn_attr    = (nn_attr == 0) and 1 or nn_attr
-                  local nn_hanguls = hanja2hangul[ nn_char ]
-                  local syllable   = nn_hanguls and nn_hanguls[nn_attr] or nn_char
-                  local cho        = math_floor((syllable - 0xAC00) / 588)
-                  hangul = (cho == 3 or cho == 12) and 0xBD80 or 0xBD88 -- ㄷ,ㅈ ? 부 : 불
-                elseif not middle then
-                  hangul = n_dooum_r(hangul, var_seq)
-                else
-                  hangul = n_dooum_r(hangul, var_seq, last_hangul)
+          local hanguls, hangul
+          if attr > 32 then
+            hanguls, hangul = {attr}, attr
+          else
+            local dict = reading_dictionary[char]
+            hanguls = hanja2hangul[char]
+            hangul  = hanguls and hanguls[attr]
+            if o_attr == 0 then
+              if hangul then
+                local var_seq = hanja2varseq[char]
+                if var_seq then
+                  local nn = getnext(curr)
+                  if nn and getid(nn) == glyph_id then
+                    local nn_char   = getchar(nn)
+                    local var_hanja = var_seq[ nn_char - 0xFE00 + 1 ]
+
+                    -- variation selector
+                    if var_hanja then
+                      hangul = hanja2hangul[var_hanja][1]
+
+                    -- 사전 검색
+                    elseif dict then
+                      hanguls, hangul = search_dictionary(hanguls, hangul, curr, dict, nn)
+
+                    -- 不
+                    elseif char == 0x4E0D then
+                      local nn_attr    = getattr(nn, tohangul)
+                            nn_attr    = (nn_attr == 0) and 1 or nn_attr
+                      local nn_hanguls = hanja2hangul[ nn_char ]
+                      local syllable   = nn_hanguls and nn_hanguls[nn_attr] or nn_char
+                      local cho        = math_floor((syllable - 0xAC00) / 588)
+                      hangul = (cho == 3 or cho == 12) and 0xBD80 or 0xBD88 -- ㄷ,ㅈ ? 부 : 불
+
+                    -- 두음법칙
+                    elseif not middle then
+                      hangul = n_dooum_r(hangul, var_seq)
+                    else
+                      hangul = n_dooum_r(hangul, var_seq, last_hangul)
+                    end
+                  elseif not middle then
+                    hangul = n_dooum_r(hangul, var_seq)
+                  else
+                    hangul = n_dooum_r(hangul, var_seq, last_hangul)
+                  end
+
+                -- 사전 검색
+                elseif dict then
+                  hanguls, hangul = search_dictionary(hanguls, hangul, curr, dict)
                 end
-              elseif not middle then
-                hangul = n_dooum_r(hangul, var_seq)
-              else
-                hangul = n_dooum_r(hangul, var_seq, last_hangul)
+              elseif dict then
+                hanguls, hangul = search_dictionary(hanguls, hangul, curr, dict)
               end
             end
           end
