@@ -418,7 +418,6 @@ local function read_hanja_ruby (head, locate)
         local h_glyph   = copynode(curr)
         local currwidth = getfield(h_glyph, "width")        or 655360
         local curr_yoff = getfield(h_glyph, "yoffset")      or 0
-        local curr_xoff = getfield(h_glyph, "xoffset")
 
         local currfid   = getfont(h_glyph)
         local currfnt   = currfid   and fontdata[currfid]
@@ -442,7 +441,6 @@ local function read_hanja_ruby (head, locate)
         setfield(h_glyph, "font",    rubyfid)
         setfield(h_glyph, "char",    attr)
         setfield(h_glyph, "yoffset", ruby_yoff)
-        setfield(h_glyph, "xoffset", curr_xoff)
 
         local l_space = copynode(hss_glue)
         local r_space = copynode(hss_glue)
