@@ -5,14 +5,22 @@ use charnames ();
 
 my %hanjahangul = ();
 
-open my $fh, "<:utf8", "Unihan_Readings.txt" or die;
+open my $fh, "<:utf8", "hanja.txt" or die;
+while(<$fh>) {
+  if(/^(.):(.):/) {
+    push @{ $hanjahangul{ord $2} }, $1;
+  }
+}
+close $fh;
+
+open $fh, "<:utf8", "Unihan_Readings.txt" or die;
 while(<$fh>) {
   if(/^U\+(.*?)\s+kHangul\s+(.*)$/) {
-    push @{ $hanjahangul{hex $1} }, split /\s+/,$2;
+    unshift @{ $hanjahangul{hex $1} }, split /\s+/,$2;
   }
   elsif(/^U\+(.*?)\s+kKorean\s+(.*)$/) {
-    my $uni = $1;
-    next unless $uni eq "6635" or $uni eq "66B1" or $uni eq "8D05";
+    my $uni = hex $1;
+    next if $uni >= 0xF900;
     my @kos = split /\s+/, $2;
     for (@kos) {
       s/PEY/BAE/g; # exception: 베 -> 배
@@ -40,15 +48,12 @@ while(<$fh>) {
       s/UY/YI/g;
       $_ = charnames::string_vianame("HANGUL SYLLABLE $_");
     }
-    unshift @{ $hanjahangul{hex $uni} }, @kos;
-  }
-}
-close $fh;
-
-open $fh, "<:utf8", "hanja.txt" or die;
-while(<$fh>) {
-  if(/^(.):(.):/) {
-    push @{ $hanjahangul{ord $2} }, $1;
+    if( $uni == 0x6635 or $uni == 0x66B1 or $uni == 0x8D05 ) {
+      unshift @{ $hanjahangul{$uni} }, @kos;
+    }
+    else {
+      push @{ $hanjahangul{$uni} }, @kos;
+    }
   }
 }
 close $fh;
