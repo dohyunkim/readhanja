@@ -1,8 +1,8 @@
 
 local err,warn,info,log = luatexbase.provides_module({
   name        = 'readhanja',
-  date        = '2015/05/17',
-  version     = '0.4',
+  date        = '2015/05/18',
+  version     = '0.5',
   description = 'Typeset Hanja-to-Hangul sound values',
   author      = 'Dohyun Kim',
   license     = 'Public Domain',
@@ -28,21 +28,34 @@ local getattr       = ndirect.has_attribute
 local unset_attr    = ndirect.unset_attribute
 local set_attr      = ndirect.set_attribute
 local tailnode      = ndirect.tail
+local getlist       = ndirect.getlist
+local nodehpack     = ndirect.hpack
 
 local node_id       = node.id
 local glyph_id      = node_id("glyph")
 local penalty_id    = node_id("penalty")
 local rule_id       = node_id("rule")
 local kern_id       = node_id("kern")
+local hlist_id      = node_id("hlist")
+local vlist_id      = node_id("vlist")
+local glue_id       = node_id("glue")
+local glue_spec_id  = node_id("glue_spec")
 
 local nobreak       = newnode(penalty_id); setfield(nobreak, "penalty", 10000)
 local newrule       = newnode(rule_id)
 local newkern       = newnode(kern_id, 1)
+local hss_glue      = newnode(glue_id)
+local hss_spec      = newnode(glue_spec_id)
+setfield(hss_spec, "width",         0)
+setfield(hss_spec, "stretch",       1)
+setfield(hss_spec, "shrink",        1)
+setfield(hss_spec, "stretch_order", 1)
+setfield(hss_spec, "shrink_order",  1)
+setfield(hss_glue, "spec",          hss_spec)
 
 local fontdata      = fonts.hashes.identifiers
 local tohangul      = luatexbase.attributes.readhanjatohangul
 
-local utfbyte       = unicode.utf8.byte
 local math_floor    = math.floor
 
 local hanja2hangul  = dofile(kpse.find_file("hanja2hangul.lua"))
@@ -66,10 +79,15 @@ end
 -- hanja2hangul 테이블을 수정/추가한다
 -- string * string -> none
 local function add_hanja_reading (hanja, hanguls)
-  hanja   = utfbyte(hanja)
-  hanguls = hanguls:explode(",")
-  for i,v in ipairs(hanguls) do hanguls[i] = utfbyte(v) end
-  hanja2hangul[hanja] = hanguls
+  for uni in hanja:utfvalues() do
+    hanja = uni
+  end
+  local t = {}
+  hanguls = hanguls:gsub(",", "")
+  for uni in hanguls:utfvalues() do
+    t[#t + 1] = uni
+  end
+  hanja2hangul[hanja] = t
 end
 readhanja.add_hanja_reading = add_hanja_reading
 
@@ -225,11 +243,14 @@ local function flush_appends (head, curr, appends, after)
   return head, {} -- no need to return curr
 end
 
+-- pre_linebreak_filter / hpack_filter callback
 -- node -> node
 local function read_hanja (head)
   head = todirect(head)
   local curr, start, middle, last_hangul = head, nil, nil, nil
-  local appends = readhanja.locate == "post" and {} or nil
+  local typeset = readhanja.locate
+  local appends = typeset == "post" and {} or nil
+  typeset = readhanja.draft or (typeset ~= "top" and typeset ~= "bottom")
 
   while curr do
     if getid(curr) == glyph_id then
@@ -240,13 +261,6 @@ local function read_hanja (head)
         local o_attr = getattr(curr, tohangul)
         local attr   = (o_attr == 0) and 1 or o_attr
         if attr then
-          local raise = readhanja.raise
-          if not raise then
-            local fid = getfont(curr)
-            raise = fontdata[fid]
-            raise = raise and raise.parameters and raise.parameters.x_height
-            raise = raise and raise/2 or 0
-          end
 
           -- 음가를 결정한다
           local hanguls, hangul
@@ -304,55 +318,67 @@ local function read_hanja (head)
             end
           end
 
-          -- draft 옵션이 주어진 경우
-          if readhanja.draft then
-            if appends then
-              head, appends = flush_appends(head, curr, appends)
+          if typeset then
+            local raise = readhanja.raise
+            if not raise then
+              local fid = getfont(curr)
+              raise = fontdata[fid]
+              raise = raise and raise.parameters and raise.parameters.x_height
+              raise = raise and raise/2 or 0
             end
-            local hanguls = hanguls or { false }
-            for i=1,#hanguls do
-              local t_hangul = hanguls[i]
+
+            -- draft 옵션이 주어진 경우
+            if readhanja.draft then
               if appends then
-                appends = insert_hangul(appends, curr, t_hangul, raise)
-              else
-                head = insert_hangul(head, curr, t_hangul, raise)
+                head, appends = flush_appends(head, curr, appends)
               end
-              if #hanguls > 1 and hangul == t_hangul then
-                local rule, wd = get_rule_node(raise, hangul)
-                local kern     = copynode(newkern)
-                setfield(kern, "kern", -wd)
+              local hanguls = hanguls or { false }
+              for i=1,#hanguls do
+                local t_hangul = hanguls[i]
                 if appends then
-                  appends[#appends + 1] = kern
-                  appends[#appends + 1] = rule
+                  appends = insert_hangul(appends, curr, t_hangul, raise)
                 else
-                  head = insert_before(head, curr, kern)
-                  head = insert_before(head, curr, rule)
-                  head = insert_before(head, curr, copynode(nobreak))
+                  head = insert_hangul(head, curr, t_hangul, raise)
+                end
+                if #hanguls > 1 and hangul == t_hangul then
+                  local rule, wd = get_rule_node(raise, hangul)
+                  local kern     = copynode(newkern)
+                  setfield(kern, "kern", -wd)
+                  if appends then
+                    appends[#appends + 1] = kern
+                    appends[#appends + 1] = rule
+                  else
+                    head = insert_before(head, curr, kern)
+                    head = insert_before(head, curr, rule)
+                    head = insert_before(head, curr, copynode(nobreak))
+                  end
                 end
               end
-            end
 
-          -- 글자 단위로 읽으라고 요구한 경우
-          elseif readhanja.unit == "char" then
-            if appends then
-              head, appends = flush_appends(head, curr, appends)
-              appends = insert_hangul(appends, curr, hangul, raise)
+            -- 글자 단위로 읽으라고 요구한 경우
+            elseif readhanja.unit == "char" then
+              if appends then
+                head, appends = flush_appends(head, curr, appends)
+                appends = insert_hangul(appends, curr, hangul, raise)
+              else
+                head = insert_hangul(head, curr, hangul, raise)
+              end
+
+            -- 디폴트. 단어 단위 처리
             else
-              head = insert_hangul(head, curr, hangul, raise)
-            end
+              start = start or curr
+              if appends then
+                appends = insert_hangul(appends, start, hangul, raise, true)
+              else
+                head  = insert_hangul(head, start, hangul, raise, true)
+              end
 
-          -- 디폴트. 단어 단위 처리
+            end
+            unset_attr(curr, tohangul)
           else
-            start = start or curr
-            if appends then
-              appends = insert_hangul(appends, start, hangul, raise, true)
-            else
-              head  = insert_hangul(head, start, hangul, raise, true)
-            end
-
-          end
+            set_attr(curr, tohangul, hangul) -- pass to post_linebreak_filter
+          end -- end of typeset
           middle, last_hangul = true, hangul
-          unset_attr(curr, tohangul)
         else
           start, middle, last_hangul = nil, nil, nil
           if appends then
@@ -380,6 +406,79 @@ local function read_hanja (head)
   return tonode(head)
 end
 
+-- post_linebreak_filter callback
+-- node -> node
+local function read_hanja_ruby (head, locate)
+  local curr = head
+  while curr do
+    local currid = getid(curr)
+    if currid == glyph_id and is_hanja_char(getchar(curr)) then
+      local attr = getattr(curr, tohangul)
+      if attr then
+        local h_glyph   = copynode(curr)
+        local currwidth = getfield(h_glyph, "width")        or 655360
+        local curr_yoff = getfield(h_glyph, "yoffset")      or 0
+        local curr_xoff = getfield(h_glyph, "xoffset")
+
+        local currfid   = getfont(h_glyph)
+        local currfnt   = currfid   and fontdata[currfid]
+        local currparam = currfnt   and currfnt.parameters
+        local currasc   = currparam and currparam.ascender  or 655360*.8
+        local currdesc  = currparam and currparam.descender or 655360/5
+
+        local rubyfid   = readhanja.hangulfont
+        local rubyfnt   = rubyfid   and fontdata[rubyfid]
+        local rubyparam = rubyfnt   and rubyfnt.parameters
+        local rubyasc   = rubyparam and rubyparam.ascender  or  655360*.8
+        local rubydesc  = rubyparam and rubyparam.descender or  655360/5
+
+        local ruby_yoff = readhanja.raise or 0
+        if locate == "top" then
+          ruby_yoff = ruby_yoff + curr_yoff + currasc  + rubydesc
+        else
+          ruby_yoff = ruby_yoff + curr_yoff - currdesc - rubyasc
+        end
+
+        setfield(h_glyph, "font",    rubyfid)
+        setfield(h_glyph, "char",    attr)
+        setfield(h_glyph, "yoffset", ruby_yoff)
+        setfield(h_glyph, "xoffset", curr_xoff)
+
+        local l_space = copynode(hss_glue)
+        local r_space = copynode(hss_glue)
+        setfield(l_space, "next",    h_glyph)
+        setfield(h_glyph, "next",    r_space)
+        local h_box   = nodehpack(l_space, currwidth, "exactly")
+        setfield(h_box,   "width",   0)
+        setfield(h_box,   "height",  0)
+        setfield(h_box,   "depth",   0)
+
+        head = insert_before(head, curr, h_box)
+
+        unset_attr(curr, tohangul)
+      end
+    elseif currid == hlist_id or currid == vlist_id then
+      local head = getlist(curr)
+      head = read_hanja_ruby(head, locate)
+      setfield(curr, "head", head)
+    end
+    curr = getnext(curr)
+  end
+
+  return head
+end
+
 local add_to_callback = luatexbase.add_to_callback
+
 add_to_callback("pre_linebreak_filter", read_hanja, "read_hanja", 1)
-add_to_callback("hpack_filter", read_hanja, "read_hanja", 1)
+add_to_callback("hpack_filter",         read_hanja, "read_hanja", 1)
+add_to_callback("post_linebreak_filter",
+                function (head)
+                  local locate = readhanja.locate
+                  if locate == "top" or locate == "bottom" then
+                    head = todirect(head)
+                    head = read_hanja_ruby(head, locate)
+                    return tonode(head)
+                  end
+                  return head
+                end, "read_hanja")

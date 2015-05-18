@@ -9,7 +9,7 @@
   \cscolor{"0 0.5 0.5"}
 \begin{document}
 
-\title{\ttfamily readhanja 패키지 v0.4}
+\title{\ttfamily readhanja 패키지 v0.5}
 \author{Dohyun Kim\thanks{\texttt{nomos at ktug org}.
   아이디어와 동기를 주신 김강수 선생께 감사드린다.}}
 \maketitle
@@ -21,13 +21,23 @@ Hanja-to-Hangul sound values.
   github 저장소: \url{https://github.com/dohyunkim/readhanja}}
 \end{quote}
 
+\section*{Install}
+
+KTUG 사설 저장소로부터 설치한다.\footnote{
+  \url{http://wiki.ktug.org/wiki/wiki.php/KtugPrivateRepository}}
+또는
+\verb|*.lua| 및 \verb|*.sty| 파일을 \TeX\ Directory Structure에 맞게 복사한다.\footnote{
+  예컨대 \url{$TEXMFHOME/tex/lualatex/readhanja/} 디렉토리 밑이 적당하다.
+  \url{$TEXMFHOME}\,은 \texttt{kpsewhich --expand-var \textbackslash\$TEXMFHOME}
+  명령으로 알아낼 수 있다.}
+
 \section*{Usage}
 
 \begin{verbatim}
   \usepackage[draft]{readhanja}
 \end{verbatim}
 draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
-밑줄을 긋는다. draft 옵션은 \verb|char| 단위를 강제한다. (see below)
+밑줄을 긋는다.
 
 \begin{verbatim}
   \readhanjahangulfont{...}[...]
@@ -37,29 +47,35 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 \begin{verbatim}
   \readhanjaraise{0pt}
 \end{verbatim}
-한글 독음을 올려 쓰는 정도를 지시한다. 0.5ex가 기본값.
+한글 독음을 올려 쓰는 정도를 지시한다.
+독음 위치 \verb|pre| 또는 \verb|post|\,에서는 기본값이 0.5ex이고,
+\verb|top| 또는 \verb|bottom|\,에서는 기본값이 0pt이다.
 
 \begin{verbatim}
   \readhanjalocate{post}
 \end{verbatim}
-독음의 위치. 한자 앞\,\verb|pre|\,에 달 것인가, 뒤\,\verb|post|\,에 달 것인가, 를
-지시한다.  기본값은 앞에 달기.
+독음의 위치. 한자 앞\,\verb|pre|, 뒤\,\verb|post|,
+위\,\verb|top|, 아래\,\verb|bottom| 중에 하나를 지시할 수 있다.
+기본값은 앞에 달기.
+draft 옵션은 \verb|pre| 또는 \verb|post|\,만 인식한다.
 
 \begin{verbatim}
   \readhanjaunit{char}
 \end{verbatim}
 읽기 단위. 독음을 글자\,\verb|char|\,마다 달 것인가, 단어\,\verb|word| 단위로
 달 것인가, 를 지시한다. 단어 단위가 기본값.
+draft 옵션은 글자 단위를 강제한다.
+독음 위치 \verb|top| 또는 \verb|bottom|\,도 글자 단위를 강제한다.
 
 \begin{verbatim}
   \readhanjareading{樂}{악,낙,락,요}
 \end{verbatim}
-한글 음가 DB를 수정하거나 항목을 추가한다. 참고로 \verb|hanja2hangul.lua|는
+한글 음가 DB를 수정하거나 항목을 추가한다. 참고로 \verb|hanja2hangul.lua|\,는
 Unihan\footnote{\url{http://unicode.org/charts/unihan.html}}과
 libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
 프로젝트에서 추출한 약 27,800개 한자의 음가를
 가지고 있다.\footnote{음가의 정렬은 Unihan의 \texttt{kHangul}을 앞세웠으나
-  다만 \mbox{U+6635} \mbox{U+66B1} \mbox{U+8D05}는 \texttt{kKorean} 값을 읽어
+  다만 \mbox{U+6635} \mbox{U+66B1} \mbox{U+8D05}는 \texttt{kKorean} 값을
   맨 앞에 두었다. 한편, 호환한자의 음가와 같은 음가는 두번째 이하로 돌렸다.}
 
 \begin{verbatim}
@@ -79,8 +95,8 @@ libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
 \end{verbatim}
 예컨대 樂 글자의 여러 음가 가운데 네번째 음가를 선택한다\,(제1행).
 또는 한글 음가를 직접 지시할 수도 있다\,(제2행).\footnote{여기서 \texttt{`요}는 십진수 50836과 같다.
-  다시 말해 숫자가 유니코드 한글 음절 코드포인트에 해당하는 큰 것이라면 그 숫자가 음가를 직접 의미한다.}
-물론 readhanja 그룹 밖에서는 이 명령이 다른 의미를 가질 수 있다.
+  다시 말해 유니코드 한글 음절 코드포인트에 해당하는 큰 숫자라면 그 숫자가 막바로 음가를 지시한다.}
+readhanja 그룹 안에서만 이렇게 동작한다.
 
 \begin{verbatim}
   樂^^^^fe02
@@ -102,7 +118,7 @@ libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
   \usepackage[hangul]{kotex}
     \setmainhangulfont{HCR Batang LVT}
   \usepackage{readhanja}
-    \readhanjahangulfont{HCR Batang LVT}[Color=AA0000A0,Scale=.7]
+    \readhanjahangulfont{HCR Batang LVT}[Color=AA000080,Scale=.7]
   \begin{document}
   \section*{大學}
   \begin{readhanja}

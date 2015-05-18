@@ -3,7 +3,7 @@
 % written by Dohyun Kim
 % public domain
 
-\ProvidesPackage{readhanja}[2015/05/17 v0.4 Typeset Hanja-to-Hangul sound values]
+\ProvidesPackage{readhanja}[2015/05/18 v0.5 Typeset Hanja-to-Hangul sound values]
 
 \newluatexattribute\readhanjatohangul
 \RequireLuaModule{readhanja}
@@ -11,7 +11,6 @@
 % [draft] 옵션을 주면 모든 독음을 다 나열한다.
 % 그중 하나를 '\t2樂' 방식으로 선택한다. 1이 기본값.
 % 현재 선택된 독음에 굵은 밑줄이 그어진다.
-% [draft] 옵션에서는 읽기 단위가 항상 char로 동작한다.
 \DeclareOption{draft}{\directlua{readhanja.draft=true}}
 \ProcessOptions\relax
 
@@ -51,22 +50,28 @@
   \directlua{readhanja.add_hanja_dictionary("#1","#2")}%
 }
 
-
-% 한글 독음의 올려쓰기 정도: \readhanjaraise{0.5ex}. 이게 기본값.
+% 한글 독음의 올려쓰기 정도: \readhanjaraise{0.5ex}.
+% 독음 위치 pre 또는 post에서는 기본값이 0.5ex.
+% 독음 위치 top 또는 bottom에서는 기본값이 0pt.
 \protected\def\readhanjaraise#1{%
   \directlua{readhanja.raise=tex.sp("#1")}%
 }
 
-% 읽기 단위: 독음을 글자마다 달 것인가? 단어 단위로 달 것인가?
+% 읽기 단위: 독음을 글자마다 달 것인가, 단어 단위로 달 것인가?
 %   \readhanjaunit{char} or \readhanjaunit{word}
-% 단어 단위가 기본값
+% 기본값은 word.
+% [draft] 옵션은 읽기 단위 char를 강제한다.
+% 독음 위치 top 또는 bottom은 읽기 단위 char를 강제한다.
 \protected\def\readhanjaunit#1{%
   \directlua{readhanja.unit="#1"}%
 }
 
-% 독음 달기 위치: 한자 앞에 달 것인가, 뒤에 달 것인가.
-%   \readhanjalocate{pre} or \readhanjalocate{post}
-% 기본값은 pre
+% 독음 달기 위치: 한자 앞에 달 것인가, 뒤에 달 것인가,
+%                 한자 위에 달 것인가, 아래에 달 것인가?
+%   \readhanjalocate{pre} or \readhanjalocate{post} or
+%   \readhanjalocate{top} or \readhanjalocate{bottom}
+% 기본값은 pre.
+% [draft] 옵션은 pre 또는 post만 허용한다.
 \protected\def\readhanjalocate#1{%
   \directlua{readhanja.locate="#1"}%
 }

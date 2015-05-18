@@ -11,7 +11,7 @@ Hanja-to-Hangul sound values
 \usepackage[draft]{readhanja}
 ```
 draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
-밑줄을 긋는다. draft 옵션은 `char` 단위를 강제한다. (see below)
+밑줄을 긋는다.
 
 ```
 \readhanjahangulfont{...}[...]
@@ -21,19 +21,25 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 ```
 \readhanjaraise{0pt}
 ```
-한글 독음을 올려 쓰는 정도를 지시한다. 0.5ex가 기본값.
+한글 독음을 올려 쓰는 정도를 지시한다.
+독음 위치 `pre` 또는 `post`에서는 기본값이 0.5ex.
+독음 위치 `top` 또는 `bottom`에서는 기본값이 0pt.
 
 ```
 \readhanjalocate{post}
 ```
-독음 위치. 한자 앞(`pre`)에 달 것인가, 뒤(`post`)에 달 것인가, 를
-지시한다.  기본값은 `pre`.
+독음 위치. 한자 앞(`pre`)에 달 것인가, 뒤(`post`)에 달 것인가,
+위(`top`)에 달 것인가, 아래(`bottom`)에 달 것인가,
+를 지시한다.  기본값은 `pre`.
+draft 옵션은 `pre` 또는 `post`만 인식한다.
 
 ```
 \readhanjaunit{char}
 ```
 읽기 단위. 독음을 글자(`char`)마다 달 것인가, 단어(`word`) 단위로
-달 것인가, 를 지시한다. 단어 단위가 기본값.
+달 것인가, 를 지시한다. 기본값은 단어 단위.
+draft 옵션은 글자 단위를 강제한다.
+독음 위치 `top` 또는 `bottom`도 글자 단위를 강제한다.
 
 ```
 \readhanjareading{樂}{악,낙,락,요}
@@ -43,7 +49,8 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
 [libhangul](https://github.com/choehwanjin/libhangul)
 프로젝트에서 추출한 것으로 약 27,800개 한자의 음가를
 가지고 있다. 음가의 정렬은 Unihan의 `kHangul`을 앞세웠으나,
-다만 U+6635 U+66B1 U+8D05는 `kKorean` 값을 읽어 맨 앞에 두었다.
+다만 U+6635 U+66B1 U+8D05는 `kKorean` 값을 맨 앞에 두었다.
+또한 호환한자의 음가와 동일한 음가는 두번째 이하로 돌렸다.
 
 ```
 \readhanjadictionary{召史}{조이}
