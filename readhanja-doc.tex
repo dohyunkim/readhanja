@@ -1,21 +1,24 @@
-\documentclass[b5paper]{article}
+\documentclass[a4paper,12pt]{article}
 \usepackage[hangul]{kotex}
   \setmainhangulfont{HCR Batang LVT}[InterLatinCJK=.125em]
   \setmonofont{Source Han Sans HW K}[Color=191970,Scale=.95]
 \usepackage{readhanja}
   \readhanjahangulfont{HCR Batang LVT}[Color=AA000080,Scale=.7]
-\usepackage{url}
+\usepackage{hyperref}
 \usepackage{colorVerb}
 \begin{document}
 
-\title{\ttfamily readhanja 패키지 v0.5}
+\title{\ttfamily readhanja 패키지 v0.5\thanks{이 문서를 컴파일하려면
+    \href{https://gist.github.com/dohyunkim/5f2dc71b1ff85adb3978}{\texttt{colorVerb}}
+    패키지가 필요하다.
+}}
 \author{Dohyun Kim\thanks{\texttt{nomos at ktug org}.
   아이디어와 동기를 주신 김강수 선생께 감사드린다.}}
 \maketitle
 
 \begin{quote}
 A Lua\LaTeX\ package for semi-automatized typesetting of
-Hanja-to-Hangul sound values.
+Hanja-to-Hangul sound values.\\
 한자만 입력하면 한글 독음을 붙여주는 패키지. 루아텍 판.\footnote{
   github 저장소: \url{https://github.com/dohyunkim/readhanja}}
 \end{quote}
@@ -26,9 +29,10 @@ KTUG 사설 저장소로부터 설치한다.\footnote{
   \url{http://wiki.ktug.org/wiki/wiki.php/KtugPrivateRepository}}
 또는
 \verb|*.lua| 및 \verb|*.sty| 파일을 \TeX\ Directory Structure에 맞게 복사한다.\footnote{
-  예컨대 \url{$TEXMFHOME/tex/lualatex/readhanja/} 디렉토리 밑이 적당하다.
-  \url{$TEXMFHOME}은 \texttt{kpsewhich --expand-var \textbackslash\$TEXMFHOME}
-  명령으로 알아낼 수 있다.}
+  예컨대 \texttt{\$TEXMFHOME/tex/lualatex/readhanja/} 디렉토리 밑이 적당하다.
+  \texttt{\$TEXMFHOME} 변수값은 \texttt{kpsewhich --expand-var \string\$TEXMFHOME}
+  명령으로 알아낼 수 있다.
+}
 
 \section*{Usage}
 
@@ -42,6 +46,7 @@ draft 옵션을 쓰면 모든 음가를 나열하고 현재 선택된 음가에
   \readhanjahangulfont{...}[...]
 \end{verbatim}
 한글 독음의 식자에 쓰일 글꼴을 fontspec 방식대로 지시한다.
+readhanja 환경의 시작 전에 선언돼 있어야 효력이 있다.
 
 \begin{verbatim}
   \readhanjaraise{0pt}
@@ -69,11 +74,12 @@ draft 옵션은 글자 단위를 강제한다.
 \begin{verbatim}
   \readhanjareading{樂}{악,낙,락,요}
 \end{verbatim}
-한글 음가 DB를 수정하거나 항목을 추가한다. 참고로 \verb|hanja2hangul.lua|는
-Unihan\footnote{\url{http://unicode.org/charts/unihan.html}}과
-libhangul\footnote{\url{https://github.com/choehwanjin/libhangul}}
-프로젝트에서 추출한 약 27,800개 한자의 음가를
-가지고 있다.\footnote{음가의 정렬은 Unihan의 \texttt{kHangul}을 앞세웠으나
+한글 음가 DB를 수정하거나 항목을 추가한다.\footnote{참고로
+  \texttt{hanja2hangul.lua}는
+  \href{http://unicode.org/charts/unihan.html}{Unihan}과
+  \href{https://github.com/choehwanjin/libhangul}{libhangul}
+  프로젝트에서 추출한 약 27,800개 한자의 음가를
+  가지고 있다. 음가의 정렬은 Unihan의 \texttt{kHangul}을 앞세웠으나
   다만 \mbox{U+6635} \mbox{U+66B1} \mbox{U+8D05}는 \texttt{kKorean} 값을
   맨 앞에 두었다. 한편, 호환한자의 음가와 같은 음가는 두번째 이하로 돌렸다.}
 
@@ -149,7 +155,7 @@ readhanja 그룹 안에서만 이렇게 동작한다.
   \par
 }
 
-\def\readndo#1{\bigbreak #1\texttt{\detokenize{#1}}\par}
+\def\readndo#1{\bigbreak #1\texttt{\small\detokenize{#1}}\par}
 
 \section*{大學}
 \begin{readhanja}
@@ -159,8 +165,12 @@ readhanja 그룹 안에서만 이렇게 동작한다.
   \readndo{\readhanjalocate{top}}\greatlearning
   \readndo{\readhanjalocate{bottom}}\greatlearning
 \endgroup
-\readndo{\readhanjalocate{post} \directlua{readhanja.draft=true}}\greatlearning
-\readndo{\readhanjalocate{pre} \readhanjaraise{0.5ex}}\greatlearning
+\end{readhanja}
+\bigskip
+\readndo{\readhanjahangulfont{HCR Dotum LVT}[Color=0000AA80, Scale=.9]}
+\begin{readhanja}
+\readndo{\directlua{readhanja.draft=true} \readhanjalocate{post}}\greatlearning
+\readndo{\readhanjalocate{pre} \readhanjaraise{.5ex}}\greatlearning
 \end{readhanja}
 
 \section*{License}
