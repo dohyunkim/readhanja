@@ -1,8 +1,8 @@
 
 local err,warn,info,log = luatexbase.provides_module({
   name        = 'readhanja',
-  date        = '2015/05/18',
-  version     = '0.5',
+  date        = '2015/10/02',
+  version     = '0.6',
   description = 'Typeset Hanja-to-Hangul sound values',
   author      = 'Dohyun Kim',
   license     = 'Public Domain',
@@ -468,8 +468,28 @@ end
 
 local add_to_callback = luatexbase.add_to_callback
 
-add_to_callback("pre_linebreak_filter", read_hanja, "read_hanja", 1)
-add_to_callback("hpack_filter",         read_hanja, "read_hanja", 1)
+local add_to_callback_first_pos
+if luatexbase.callbacktypes then -- latex 2015/10/01
+  local callback_descriptions = luatexbase.callback_descriptions
+  local remove_from_callback  = luatexbase.remove_from_callback
+  add_to_callback_first_pos = function (cbname, myfunc, mydesc)
+    local origs = {}
+    for _,v in ipairs(callback_descriptions(cbname)) do
+      origs[#origs+1] = {remove_from_callback(cbname,v)}
+    end
+    add_to_callback(cbname, myfunc, mydesc)
+    for _,v in ipairs(origs) do
+      add_to_callback(cbname, v[1], v[2])
+    end
+  end
+else
+  add_to_callback_first_pos = function (cbname, myfunc, mydesc)
+    add_to_callback(cbname, myfunc, mydesc, 1)
+  end
+end
+
+add_to_callback_first_pos("pre_linebreak_filter", read_hanja, "read_hanja")
+add_to_callback_first_pos("hpack_filter",         read_hanja, "read_hanja")
 add_to_callback("post_linebreak_filter",
                 function (head)
                   local locate = readhanja.locate
