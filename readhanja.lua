@@ -1,5 +1,5 @@
 
-local err,warn,info,log = luatexbase.provides_module({
+luatexbase.provides_module({
   name        = 'readhanja',
   date        = '2015/12/10',
   version     = '0.7',
