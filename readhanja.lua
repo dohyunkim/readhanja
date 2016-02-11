@@ -466,10 +466,22 @@ local function read_hanja_ruby (head, locate)
   return head
 end
 
-local add_to_callback = luatexbase.add_to_callback
+local add_to_callback       = luatexbase.add_to_callback
+local callback_descriptions = luatexbase.callback_descriptions
+local remove_from_callback  = luatexbase.remove_from_callback
 
-add_to_callback("pre_linebreak_filter", read_hanja, "read_hanja", 1)
-add_to_callback("hpack_filter",         read_hanja, "read_hanja", 1)
+local function pre_to_callback (name, func, desc)
+  local t = { {func, desc} }
+  for _,v in ipairs(callback_descriptions(name)) do
+    t[#t+1] = {remove_from_callback(name, v)}
+  end
+  for _,v in ipairs(t) do
+    add_to_callback(name, v[1], v[2])
+  end
+end
+
+pre_to_callback("pre_linebreak_filter", read_hanja, "read_hanja")
+pre_to_callback("hpack_filter",         read_hanja, "read_hanja")
 add_to_callback("post_linebreak_filter",
                 function (head)
                   local locate = readhanja.locate
