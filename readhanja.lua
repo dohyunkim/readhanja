@@ -1,8 +1,8 @@
 
 luatexbase.provides_module({
   name        = 'readhanja',
-  date        = '2015/12/10',
-  version     = '0.7',
+  date        = '2016/04/01',
+  version     = '0.8',
   description = 'Typeset Hanja-to-Hangul sound values',
   author      = 'Dohyun Kim',
   license     = 'Public Domain',
@@ -39,19 +39,16 @@ local kern_id       = node_id("kern")
 local hlist_id      = node_id("hlist")
 local vlist_id      = node_id("vlist")
 local glue_id       = node_id("glue")
-local glue_spec_id  = node_id("glue_spec")
 
 local nobreak       = newnode(penalty_id); setfield(nobreak, "penalty", 10000)
 local newrule       = newnode(rule_id)
 local newkern       = newnode(kern_id, 1)
 local hss_glue      = newnode(glue_id)
-local hss_spec      = newnode(glue_spec_id)
-setfield(hss_spec, "width",         0)
-setfield(hss_spec, "stretch",       1)
-setfield(hss_spec, "shrink",        1)
-setfield(hss_spec, "stretch_order", 1)
-setfield(hss_spec, "shrink_order",  1)
-setfield(hss_glue, "spec",          hss_spec)
+setfield(hss_glue, "width",         0)
+setfield(hss_glue, "stretch",       65536)
+setfield(hss_glue, "shrink",        65536)
+setfield(hss_glue, "stretch_order", 2)
+setfield(hss_glue, "shrink_order",  2)
 
 local fontdata      = fonts.hashes.identifiers
 local tohangul      = luatexbase.attributes.readhanjatohangul
