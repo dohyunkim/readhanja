@@ -18,7 +18,7 @@
 
 % 한글 독음에 쓰일 폰트는 \readhanjahangulfont로 지시한다.
 % 이 명령이 없으면 기본 한글 폰트로 식자한다.
-\protected\def\readhanjahangulfont{\newfontfamily\readhanja@hangulfont}
+\protected\def\readhanjahangulfont{\setfontfamily\readhanja@hangulfont}
 
 % readhanja 환경 안 or 명령 이후에만 동작한다.
 \protected\def\readhanja{%
