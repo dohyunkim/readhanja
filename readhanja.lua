@@ -43,7 +43,7 @@ local glue_id       = node_id"glue"
 
 local nobreak       = newnode(penalty_id); setfield(nobreak, "penalty", 10000)
 local newrule       = newnode(rule_id)
-local newkern       = newnode(kern_id, 1)
+local newkern       = newnode(kern_id, 0)
 local hss_glue      = newnode(glue_id); setglue(hss_glue, 0, 65536, 65536, 2, 2)
 
 local fontdata      = fonts.hashes.identifiers
