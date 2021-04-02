@@ -1,8 +1,8 @@
 
 luatexbase.provides_module({
   name        = 'readhanja',
-  date        = '2016/04/01',
-  version     = '0.8',
+  date        = '2021/04/01',
+  version     = '0.9',
   description = 'Typeset Hanja-to-Hangul sound values',
   author      = 'Dohyun Kim',
   license     = 'Public Domain',
@@ -30,47 +30,41 @@ local set_attr      = ndirect.set_attribute
 local tailnode      = ndirect.tail
 local getlist       = ndirect.getlist
 local nodehpack     = ndirect.hpack
+local setglue       = ndirect.setglue
 
 local node_id       = node.id
-local glyph_id      = node_id("glyph")
-local penalty_id    = node_id("penalty")
-local rule_id       = node_id("rule")
-local kern_id       = node_id("kern")
-local hlist_id      = node_id("hlist")
-local vlist_id      = node_id("vlist")
-local glue_id       = node_id("glue")
+local glyph_id      = node_id"glyph"
+local penalty_id    = node_id"penalty"
+local rule_id       = node_id"rule"
+local kern_id       = node_id"kern"
+local hlist_id      = node_id"hlist"
+local vlist_id      = node_id"vlist"
+local glue_id       = node_id"glue"
 
 local nobreak       = newnode(penalty_id); setfield(nobreak, "penalty", 10000)
 local newrule       = newnode(rule_id)
 local newkern       = newnode(kern_id, 1)
-local hss_glue      = newnode(glue_id)
-setfield(hss_glue, "width",         0)
-setfield(hss_glue, "stretch",       65536)
-setfield(hss_glue, "shrink",        65536)
-setfield(hss_glue, "stretch_order", 2)
-setfield(hss_glue, "shrink_order",  2)
+local hss_glue      = newnode(glue_id); setglue(hss_glue, 0, 65536, 65536, 2, 2)
 
 local fontdata      = fonts.hashes.identifiers
 local tohangul      = luatexbase.attributes.readhanjatohangul
-
-local math_floor    = math.floor
 
 local hanja2hangul  = dofile(kpse.find_file("hanja2hangul.lua"))
 local hanja2varseq  = dofile(kpse.find_file("hanja2varseq.lua"))
 
 -- number -> bool
 local function is_var_selector (ch)
-  return (ch >= 0xFE00  and ch <= 0xFE0F )
-      or (ch >= 0xE0100 and ch <= 0xE01EF)
+  return ch >= 0xFE00  and ch <= 0xFE0F
+      or ch >= 0xE0100 and ch <= 0xE01EF
 end
 
 -- number -> bool
 local function is_hanja_char (ch)
-  return (ch >= 0x4E00  and ch <= 0x9FFF )
-      or (ch >= 0x3400  and ch <= 0x4DBF )
-      or (ch >= 0x20000 and ch <= 0x2B81F)
-      or (ch >= 0xF900  and ch <= 0xFAFF )
-      or (ch >= 0x2F800 and ch <= 0x2FA1F)
+  return ch >= 0x4E00  and ch <= 0x9FFF
+      or ch >= 0x3400  and ch <= 0x4DBF
+      or ch >= 0x20000 and ch <= 0x2B81F
+      or ch >= 0xF900  and ch <= 0xFAFF
+      or ch >= 0x2F800 and ch <= 0x2FA1F
 end
 
 -- hanja2hangul 테이블을 수정/추가한다
@@ -186,10 +180,10 @@ local function n_dooum_r (hangul, var_seq, last_hangul)
       end
     end
   else
-    if (hangul >= 0xB77C and hangul <= 0xB9C7) then -- ㄹ..
+    if hangul >= 0xB77C and hangul <= 0xB9C7 then -- ㄹ..
       local var_hanja = var_seq[1]
       return hanja2hangul[var_hanja][1]
-    elseif (hangul >= 0xB098 and hangul <= 0xB2E3) then -- ㄴ..
+    elseif hangul >= 0xB098 and hangul <= 0xB2E3 then -- ㄴ..
       local hang = hangul + 5292 -- ㅇ..
       for _,v in ipairs(var_seq) do
         if hang == hanja2hangul[v][1] then return hang end
@@ -244,9 +238,9 @@ end
 -- node -> node
 local function read_hanja (head)
   head = todirect(head)
-  local curr, start, middle, last_hangul = head, nil, nil, nil
+  local curr, start, middle, last_hangul = head
   local typeset = readhanja.locate
-  local appends = typeset == "post" and {} or nil
+  local appends = typeset == "post" and {}
   typeset = readhanja.draft or (typeset ~= "top" and typeset ~= "bottom")
 
   while curr do
@@ -256,7 +250,7 @@ local function read_hanja (head)
         -- pass
       elseif is_hanja_char(char) then
         local o_attr = getattr(curr, tohangul)
-        local attr   = (o_attr == 0) and 1 or o_attr
+        local attr   = o_attr == 0 and 1 or o_attr
         if attr then
 
           -- 음가를 결정한다
@@ -287,10 +281,10 @@ local function read_hanja (head)
                     -- 不
                     elseif char == 0x4E0D then
                       local nn_attr    = getattr(nn, tohangul)
-                            nn_attr    = (nn_attr == 0) and 1 or nn_attr
+                            nn_attr    = nn_attr == 0 and 1 or nn_attr
                       local nn_hanguls = hanja2hangul[ nn_char ]
                       local syllable   = nn_hanguls and nn_hanguls[nn_attr] or nn_char
-                      local cho        = math_floor((syllable - 0xAC00) / 588)
+                      local cho        = (syllable - 0xAC00) // 588
                       hangul = (cho == 3 or cho == 12) and 0xBD80 or 0xBD88 -- ㄷ,ㅈ ? 부 : 불
 
                     -- 두음법칙
@@ -439,6 +433,7 @@ local function read_hanja_ruby (head, locate)
         setfield(h_glyph, "char",    attr)
         setfield(h_glyph, "yoffset", ruby_yoff)
 
+        --[[
         local l_space = copynode(hss_glue)
         local r_space = copynode(hss_glue)
         setfield(l_space, "next",    h_glyph)
@@ -447,8 +442,18 @@ local function read_hanja_ruby (head, locate)
         setfield(h_box,   "width",   0)
         setfield(h_box,   "height",  0)
         setfield(h_box,   "depth",   0)
-
         head = insert_before(head, curr, h_box)
+        --]]
+
+        local rb_wd = getfield(h_glyph, "width")
+        local leftsp = (currwidth - rb_wd)/2
+        local k = copynode(newkern)
+        setfield(k, "kern", leftsp)
+        local k2 = copynode(k)
+        setfield(k2, "kern", -leftsp-rb_wd)
+        head = insert_before(head, curr, k)
+        head = insert_before(head, curr, h_glyph)
+        head = insert_before(head, curr, k2)
 
         unset_attr(curr, tohangul)
       end
@@ -477,9 +482,8 @@ local function pre_to_callback (name, func, desc)
   end
 end
 
-pre_to_callback("pre_linebreak_filter", read_hanja, "read_hanja")
-pre_to_callback("hpack_filter",         read_hanja, "read_hanja")
-add_to_callback("post_linebreak_filter",
+pre_to_callback("pre_shaping_filter", read_hanja, "read_hanja.pre_post")
+add_to_callback("post_shaping_filter",
                 function (head)
                   local locate = readhanja.locate
                   if locate == "top" or locate == "bottom" then
@@ -488,4 +492,4 @@ add_to_callback("post_linebreak_filter",
                     return tonode(head)
                   end
                   return head
-                end, "read_hanja")
+                end, "read_hanja.top_bottom")

@@ -1,18 +1,19 @@
-\RequirePackage{luatex85}
 \documentclass[a4paper,11pt]{article}
 \usepackage[hangul]{kotex}
-  \setmainhangulfont{Noto Serif CJK KR}[InterLatinCJK=.125em]
-  \setmonofont{Noto Sans Mono CJK KR}[Color=191970,Scale=.95]
+\setmainfont{Latin Modern Roman}
+\setsansfont{Latin Modern Sans}
+\setmonofont{Latin Modern Mono}
+\defaultfontfeatures+{Script=Hangul}
+\setmainhangulfont{Noto Serif CJK KR}[InterLatinCJK=.125em, CompressPunctuations]
+\setsanshangulfont{Noto Sans CJK KR}[InterLatinCJK=.125em]
+\setmonohangulfont{Noto Sans Mono CJK KR}[Scale=.95]
 \usepackage{readhanja}
-  \readhanjahangulfont{Noto Serif CJK KR}[Color=AA000080,Scale=.7]
-\usepackage{hyperref}
-\usepackage{colorVerb}
+\readhanjahangulfont{Noto Serif CJK KR}[Color=AA440099,Scale=.7]
+\usepackage{xcolor,luacolor,hyperref}
+\edef\ttfamily{\unexpanded\expandafter{\ttfamily\color[HTML]{191970}}}
 \begin{document}
 
-\title{\ttfamily readhanja 패키지 v0.8\thanks{이 문서를 컴파일하려면
-    \href{https://gist.github.com/dohyunkim/5f2dc71b1ff85adb3978}{\texttt{colorVerb}}
-    패키지가 필요하다.
-}}
+\title{\ttfamily readhanja 패키지 v0.9}
 \author{Dohyun Kim\thanks{\texttt{nomos at ktug org}.
   아이디어와 동기를 주신 김강수 선생께 감사드린다.}}
 \maketitle
@@ -114,16 +115,14 @@ readhanja 그룹 안에서만 이렇게 동작한다.
 
 \section*{Example}
 
-
-\begin{usecolorVerb}
-\setmonofont{Noto Sans Mono CJK KR}[Scale=.95]
+\begingroup\linespread{1.2}
 \begin{verbatim}
   \documentclass[12pt, % draft,
     ]{article}
   \usepackage[hangul]{kotex}
-    \setmainhangulfont{HCR Batang LVT}
+  \setmainhangulfont{HCR Batang LVT}
   \usepackage{readhanja}
-    \readhanjahangulfont{HCR Batang LVT}[Color=AA000080,Scale=.7]
+  \readhanjahangulfont{HCR Batang LVT}[Color=AA0000,Scale=.7]
   \begin{document}
   \section*{大學}
   \begin{readhanja}
@@ -140,7 +139,7 @@ readhanja 그룹 안에서만 이렇게 동작한다.
   \end{readhanja}
   \end{document}
 \end{verbatim}
-\end{usecolorVerb}
+\endgroup
 
 \def\greatlearning{%
   大學之道 在明明德 在\t`신親民 在止於至善。
@@ -156,9 +155,12 @@ readhanja 그룹 안에서만 이렇게 동작한다.
   \par
 }
 
-\def\readndo#1{\bigbreak #1\texttt{\small\detokenize{#1}}\par}
+\def\readndo#1{\par\bigskip #1\texttt{\small\detokenize{#1}}\par\nobreak\medskip}
 
 \section*{大學}
+
+\spaceskip.5em plus.25em minus.25em
+
 \begin{readhanja}
 \greatlearning
 \readndo{\readhanjaraise{0pt} \readhanjalocate{post}}\greatlearning
@@ -168,14 +170,18 @@ readhanja 그룹 안에서만 이렇게 동작한다.
 \endgroup
 \end{readhanja}
 \bigskip
-\readndo{\readhanjahangulfont{HCR Dotum LVT}[Color=0000AA80, Scale=.9]}
+\readndo{\readhanjahangulfont{Noto Sans CJK KR}[Color=0055AA, Scale=.8]}
+  \vskip-\bigskipamount
+  \vskip-\medskipamount
 \begin{readhanja}
-\readndo{\directlua{readhanja.draft=true} \readhanjalocate{post}}\greatlearning
-\readndo{\readhanjalocate{pre} \readhanjaraise{.5ex}}\greatlearning
+  \readndo{\directlua{readhanja.draft=true} \readhanjalocate{post}}\greatlearning
+  \readndo{\readhanjalocate{pre} \readhanjaraise{.5ex}}\greatlearning
 \end{readhanja}
 
 \section*{License}
+\spaceskip.333em plus.167em minus.111em
 
 Public Domain,
 with an exception of \verb|hanja2hangul.lua| which is in LGPL.
+
 \end{document}
