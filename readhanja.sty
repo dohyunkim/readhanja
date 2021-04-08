@@ -27,8 +27,8 @@
     \ifdefined\readhanja@hangulfont
       \readhanja@hangulfont
     \else
-      \ifdefined\hangul@font
-        \hangul@font
+      \ifdefined\luatexkohangulfont
+        \luatexkohangulfont
       \fi
     \fi
     \directlua{readhanja.hangulfont=font.current()}%
