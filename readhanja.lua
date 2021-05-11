@@ -11,46 +11,33 @@ luatexbase.provides_module({
 readhanja = readhanja or {}
 local readhanja = readhanja
 
-local ndirect       = node.direct
-local todirect      = ndirect.todirect
-local getid         = ndirect.getid
-local getchar       = ndirect.getchar
-local getfont       = ndirect.getfont
-local copynode      = ndirect.copy
-local insert_before = ndirect.insert_before
-local insert_after  = ndirect.insert_after
-local getfield      = ndirect.getfield
-local setfield      = ndirect.setfield
-local getnext       = ndirect.getnext
-local tonode        = ndirect.tonode
-local newnode       = ndirect.new
-local getattr       = ndirect.has_attribute
-local unset_attr    = ndirect.unset_attribute
-local set_attr      = ndirect.set_attribute
-local tailnode      = ndirect.tail
-local getlist       = ndirect.getlist
-local nodehpack     = ndirect.hpack
-local setglue       = ndirect.setglue
+local copynode      = node.copy
+local insert_before = node.insert_before
+local insert_after  = node.insert_after
+local getnext       = node.getnext
+local newnode       = node.new
+local get_attr      = node.has_attribute
+local unset_attr    = node.unset_attribute
+local set_attr      = node.set_attribute
+local tailnode      = node.tail
+local setglue       = node.setglue
 
-local node_id       = node.id
-local glyph_id      = node_id"glyph"
-local penalty_id    = node_id"penalty"
-local rule_id       = node_id"rule"
-local kern_id       = node_id"kern"
-local hlist_id      = node_id"hlist"
-local vlist_id      = node_id"vlist"
-local glue_id       = node_id"glue"
+local glyph_id      = node.id"glyph"
+local penalty_id    = node.id"penalty"
+local rule_id       = node.id"rule"
+local kern_id       = node.id"kern"
+local glue_id       = node.id"glue"
 
-local nobreak       = newnode(penalty_id); setfield(nobreak, "penalty", 10000)
+local nobreak       = newnode(penalty_id); nobreak.penalty = 10000
 local newrule       = newnode(rule_id)
 local newkern       = newnode(kern_id, 0)
 local hss_glue      = newnode(glue_id); setglue(hss_glue, 0, 65536, 65536, 2, 2)
 
-local fontdata      = fonts.hashes.identifiers
 local tohangul      = luatexbase.attributes.readhanjatohangul
+local yoff_attr     = luatexbase.new_attribute"readhanja_yoffset"
 
-local hanja2hangul  = dofile(kpse.find_file("hanja2hangul.lua"))
-local hanja2varseq  = dofile(kpse.find_file("hanja2varseq.lua"))
+local hanja2hangul  = require "hanja2hangul.lua"
+local hanja2varseq  = require "hanja2varseq.lua"
 
 -- number -> bool
 local function is_var_selector (ch)
@@ -106,31 +93,71 @@ local function add_hanja_dictionary (hanjas, hanguls)
 end
 readhanja.add_hanja_dictionary = add_hanja_dictionary
 
+local harfbuzz = luaotfload.harfbuzz
+local os2tag = harfbuzz and harfbuzz.Tag.new"OS/2"
+
+local fonts_asc_desc = setmetatable( {}, { __index = function(t, fid)
+    if fid then
+      local fd = font.getfont(fid)
+      local asc, desc = fd.parameters.ascender, fd.parameters.descender
+      if not asc or not desc then
+        local hb = fd.hb
+        if hb and os2tag then
+          local hbface = hb.shared.face
+          local tags = hbface:get_table_tags()
+          local hasos2 = false
+          for _,v in ipairs(tags) do
+            if v == os2tag then
+              hasos2 = true
+              break
+            end
+          end
+          if hasos2 then
+            local os2 = hbface:get_table(os2tag)
+            local length = os2:get_length()
+            if length > 69 then -- sTypoAscender (int16)
+              local data = os2:get_data()
+              local typoascender  = string.unpack(">h", data, 69)
+              local typodescender = string.unpack(">h", data, 71)
+              asc  =  typoascender  * hb.scale
+              desc = -typodescender * hb.scale
+            end
+          end
+        end
+      end
+      if not asc or not desc then
+        asc, desc = fd.size*.8, fd.size*.2
+      end
+      t[fid] = { asc, desc }
+      return { asc, desc }
+    end
+    return { }
+  end } )
+
 -- 현재 음가에 밑줄을 긋거나, 음가 결락 한자에 대해 네모상자를
 -- 그리는 rule node를 반환한다. `hangul` 변수가 입력된다면
 -- 현재 음가에 밑줄긋기 요청임을 의미한다
 -- number * (number | nil) -> node * number
 local function get_rule_node (raise, hangul)
   local wd, ht, dp
-  local fnt   = fontdata[readhanja.hangulfont]
-  local param = fnt and fnt.parameters
-  dp = param and param.descender or 655360/5
+  local fid = readhanja.hangulfont
+  local fnt = font.getfont(fid)
+  local asc, desc = table.unpack(fonts_asc_desc[fid])
   if hangul then
     wd = fnt and fnt.characters and fnt.characters[hangul]
     wd = wd  and wd.width or 0
-    wd = wd ~= 0 and wd or 655360/2
-    ht =  raise - dp
-    dp = -raise + dp*2
+    wd = wd ~= 0 and wd or fnt.size/2
+    ht = raise  - desc
+    dp = desc*2 - raise
   else
-    wd = param and param.quad or 655360
-    ht = param and param.ascender or 655360*.8
-    ht = ht + raise
-    dp = dp - raise
+    wd = fnt.size
+    ht = asc  + raise
+    dp = desc - raise
   end
   local rule = copynode(newrule)
-  setfield(rule, "width",  wd)
-  setfield(rule, "height", ht)
-  setfield(rule, "depth",  dp)
+  rule.width  = wd
+  rule.height = ht
+  rule.depth  = dp
   return rule, wd
 end
 
@@ -144,10 +171,12 @@ local function insert_hangul (head, curr, hangul, raise, allowbreak)
   end
   if hangul then
     local hangulnode  = copynode(curr)
-    local yoffset     = getfield(hangulnode, "yoffset") or 0
-    setfield(hangulnode, "char", hangul)
-    setfield(hangulnode, "font", readhanja.hangulfont)
-    setfield(hangulnode, "yoffset", yoffset + raise)
+    hangulnode.char = hangul
+    hangulnode.font = readhanja.hangulfont
+    raise = tex.sp(raise) -- integer only
+    if raise ~= 0 then
+      set_attr(hangulnode, yoff_attr, raise)
+    end
     if postmode then
       head[#head + 1] = hangulnode
     else
@@ -199,8 +228,8 @@ end
 local function search_dictionary(hanguls, hangul, curr, dict, nn)
   local hanja_nodes = {}
   nn = nn or getnext(curr)
-  while nn and getid(nn) == glyph_id do
-    local char = getchar(nn)
+  while nn and nn.id == glyph_id do
+    local char = nn.char
     if dict[char] then
       hanja_nodes[#hanja_nodes + 1] = nn
       dict = dict[char]
@@ -237,19 +266,18 @@ end
 -- pre_linebreak_filter / hpack_filter callback
 -- node -> node
 local function read_hanja (head)
-  head = todirect(head)
   local curr, start, middle, last_hangul = head
   local typeset = readhanja.locate
   local appends = typeset == "post" and {}
   typeset = readhanja.draft or (typeset ~= "top" and typeset ~= "bottom")
 
   while curr do
-    if getid(curr) == glyph_id then
-      local char = getchar(curr)
+    if curr.id == glyph_id then
+      local char = curr.char
       if is_var_selector(char) then
         -- pass
       elseif is_hanja_char(char) then
-        local o_attr = getattr(curr, tohangul)
+        local o_attr = get_attr(curr, tohangul)
         local attr   = o_attr == 0 and 1 or o_attr
         if attr then
 
@@ -266,8 +294,8 @@ local function read_hanja (head)
                 local var_seq = hanja2varseq[char]
                 if var_seq then
                   local nn = getnext(curr)
-                  if nn and getid(nn) == glyph_id then
-                    local nn_char   = getchar(nn)
+                  if nn and nn.id == glyph_id then
+                    local nn_char   = nn.char
                     local var_hanja = var_seq[ nn_char - 0xFE00 + 1 ]
 
                     -- variation selector
@@ -280,7 +308,7 @@ local function read_hanja (head)
 
                     -- 不
                     elseif char == 0x4E0D then
-                      local nn_attr    = getattr(nn, tohangul)
+                      local nn_attr    = get_attr(nn, tohangul)
                             nn_attr    = nn_attr == 0 and 1 or nn_attr
                       local nn_hanguls = hanja2hangul[ nn_char ]
                       local syllable   = nn_hanguls and nn_hanguls[nn_attr] or nn_char
@@ -312,10 +340,7 @@ local function read_hanja (head)
           if typeset then
             local raise = readhanja.raise
             if not raise then
-              local fid = getfont(curr)
-              raise = fontdata[fid]
-              raise = raise and raise.parameters and raise.parameters.x_height
-              raise = raise and raise/2 or 0
+              raise = font.getparameters(curr.font).x_height / 2
             end
 
             -- draft 옵션이 주어진 경우
@@ -334,7 +359,7 @@ local function read_hanja (head)
                 if #hanguls > 1 and hangul == t_hangul then
                   local rule, wd = get_rule_node(raise, hangul)
                   local kern     = copynode(newkern)
-                  setfield(kern, "kern", -wd)
+                  kern.kern = -wd
                   if appends then
                     appends[#appends + 1] = kern
                     appends[#appends + 1] = rule
@@ -394,7 +419,7 @@ local function read_hanja (head)
   if appends then -- 남은 것은 마지막 노드 뒤에다 붙인다
     head = flush_appends(head, tailnode(head), appends, true)
   end
-  return tonode(head)
+  return head
 end
 
 -- post_linebreak_filter callback
@@ -402,25 +427,18 @@ end
 local function read_hanja_ruby (head, locate)
   local curr = head
   while curr do
-    local currid = getid(curr)
-    if currid == glyph_id and is_hanja_char(getchar(curr)) then
-      local attr = getattr(curr, tohangul)
+    if curr.id == glyph_id then
+      local attr = get_attr(curr, tohangul)
       if attr then
         local h_glyph   = copynode(curr)
-        local currwidth = getfield(h_glyph, "width")        or 655360
-        local curr_yoff = getfield(h_glyph, "yoffset")      or 0
+        local currwidth = h_glyph.width   or 655360
+        local curr_yoff = h_glyph.yoffset or 0
 
-        local currfid   = getfont(h_glyph)
-        local currfnt   = currfid   and fontdata[currfid]
-        local currparam = currfnt   and currfnt.parameters
-        local currasc   = currparam and currparam.ascender  or 655360*.8
-        local currdesc  = currparam and currparam.descender or 655360/5
+        local currfid  = h_glyph.font
+        local currasc, currdesc = table.unpack(fonts_asc_desc[currfid])
 
-        local rubyfid   = readhanja.hangulfont
-        local rubyfnt   = rubyfid   and fontdata[rubyfid]
-        local rubyparam = rubyfnt   and rubyfnt.parameters
-        local rubyasc   = rubyparam and rubyparam.ascender  or  655360*.8
-        local rubydesc  = rubyparam and rubyparam.descender or  655360/5
+        local rubyfid  = readhanja.hangulfont
+        local rubyasc, rubydesc = table.unpack(fonts_asc_desc[rubyfid])
 
         local ruby_yoff = readhanja.raise or 0
         if locate == "top" then
@@ -429,42 +447,41 @@ local function read_hanja_ruby (head, locate)
           ruby_yoff = ruby_yoff + curr_yoff - currdesc - rubyasc
         end
 
-        setfield(h_glyph, "font",    rubyfid)
-        setfield(h_glyph, "char",    attr)
-        setfield(h_glyph, "yoffset", ruby_yoff)
+        h_glyph.font    = rubyfid
+        h_glyph.char    = attr
+        h_glyph.yoffset = ruby_yoff
 
-        --[[
-        local l_space = copynode(hss_glue)
-        local r_space = copynode(hss_glue)
-        setfield(l_space, "next",    h_glyph)
-        setfield(h_glyph, "next",    r_space)
-        local h_box   = nodehpack(l_space, currwidth, "exactly")
-        setfield(h_box,   "width",   0)
-        setfield(h_box,   "height",  0)
-        setfield(h_box,   "depth",   0)
-        head = insert_before(head, curr, h_box)
-        --]]
-
-        local rb_wd = getfield(h_glyph, "width")
+        local rb_wd = h_glyph.width
         local leftsp = (currwidth - rb_wd)/2
         local k = copynode(newkern)
-        setfield(k, "kern", leftsp)
+        k.kern = leftsp
         local k2 = copynode(k)
-        setfield(k2, "kern", -leftsp-rb_wd)
+        k2.kern = -leftsp-rb_wd
         head = insert_before(head, curr, k)
         head = insert_before(head, curr, h_glyph)
         head = insert_before(head, curr, k2)
 
         unset_attr(curr, tohangul)
       end
-    elseif currid == hlist_id or currid == vlist_id then
-      local head = getlist(curr)
-      head = read_hanja_ruby(head, locate)
-      setfield(curr, "head", head)
     end
     curr = getnext(curr)
   end
 
+  return head
+end
+
+local function post_shaping_raise (head)
+  local curr = head
+  while curr do
+    if curr.id == glyph_id then
+      local attr = get_attr(curr, yoff_attr)
+      if attr then
+        local yoff = attr + (curr.yoffset or 0)
+        curr.yoffset = yoff
+      end
+    end
+    curr = getnext(curr)
+  end
   return head
 end
 
@@ -487,9 +504,9 @@ add_to_callback("post_shaping_filter",
                 function (head)
                   local locate = readhanja.locate
                   if locate == "top" or locate == "bottom" then
-                    head = todirect(head)
                     head = read_hanja_ruby(head, locate)
-                    return tonode(head)
+                  elseif locate == "pre" or locate == "post" then
+                    head = post_shaping_raise(head)
                   end
                   return head
                 end, "read_hanja.top_bottom")

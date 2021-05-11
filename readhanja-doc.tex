@@ -3,7 +3,8 @@
 \setmainfont{Latin Modern Roman}
 \setsansfont{Latin Modern Sans}
 \setmonofont{Latin Modern Mono}
-\defaultfontfeatures+{Script=Hangul}
+%\defaultfontfeatures+{Script=Hangul}
+\defaultfontfeatures+{Script=Hangul, Renderer=HarfBuzz}
 \directlua{
   fonts.protrusions.setups.goridot = {
     [0x3002] = { 0, 0.5 },
