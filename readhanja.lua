@@ -429,7 +429,7 @@ local function read_hanja_ruby (head, locate)
   while curr do
     if curr.id == glyph_id then
       local attr = get_attr(curr, tohangul)
-      if attr then
+      if attr and attr ~= 0 then
         local h_glyph   = copynode(curr)
         local currwidth = h_glyph.width   or 655360
         local curr_yoff = h_glyph.yoffset or 0
